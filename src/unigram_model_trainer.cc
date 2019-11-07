@@ -79,7 +79,7 @@ void TrainerModel::SetSentencePieces(SentencePieces &&sentencepieces) {
   min_score_ = FLT_MAX;
   model_proto_data_.Clear();
   model_proto_ = &model_proto_data_;
-  std::vector<std::pair<absl::string_view, int>> pieces;
+  std::vector<std::pair<absl::string_view, int64>> pieces;
 
   for (size_t i = 0; i < sentencepieces_.size(); ++i) {
     const absl::string_view w = sentencepieces_[i].first;  // piece
@@ -106,6 +106,8 @@ TrainerModel::SentencePieces Trainer::MakeSeedSentencePieces() const {
   std::unordered_map<std::string, int64> all_chars;
   constexpr char32 kSentenceBoundary = 0x0000;
 
+  LOG(INFO) << "grab all chars...";
+
   for (const auto &w : sentences_) {
     for (const auto &c : string_util::UTF8ToUnicodeText(w.first)) {
       array.push_back(c);
@@ -116,25 +118,31 @@ TrainerModel::SentencePieces Trainer::MakeSeedSentencePieces() const {
     array.push_back(kSentenceBoundary);  // sentence boundary marker.
   }
 
-  const int n = array.size();
-  std::vector<int> SA(n);  // suffix array
-  std::vector<int> L(n);   // left boundaries of internal node
-  std::vector<int> R(n);   // right boundaries of internal node
-  std::vector<int> D(n);   // depths of internal node
+  const int64 n = array.size();
+
+  LOG(INFO) << "n = " << n;
+  
+  std::vector<int64> SA(n);  // suffix array
+  std::vector<int64> L(n);   // left boundaries of internal node
+  std::vector<int64> R(n);   // right boundaries of internal node
+  std::vector<int64> D(n);   // depths of internal node
 
   // Makes a suffix array to extract all sub strings occurring
   // more than 2 times in the sentence.
-  constexpr int kAlphabetSize = 0x110000;  // All UCS4 range.
-  int node_num = 0;
+  constexpr int64 kAlphabetSize = 0x110000;  // All UCS4 range.
+  int64 node_num = 0;
+  
   LOG(INFO) << "Making suffix array...";
+  
   CHECK_EQ(0, esaxx(array.begin(), SA.begin(), L.begin(), R.begin(), D.begin(),
                     n, kAlphabetSize, node_num));
 
   LOG(INFO) << "Extracting frequent sub strings...";
-  std::vector<std::pair<int, int>> substr_index;
-  for (int i = 0; i < node_num; ++i) {
-    const int offset = SA[L[i]];
-    const int len = D[i];
+  
+  std::vector<std::pair<int64, int64>> substr_index;
+  for (int64 i = 0; i < node_num; ++i) {
+    const int64 offset = SA[L[i]];
+    const int64 len = D[i];
     if (len <= 1) {
       continue;
     }
@@ -150,8 +158,8 @@ TrainerModel::SentencePieces Trainer::MakeSeedSentencePieces() const {
     }
 
     // character-wise coverage is the default score.
-    const int freq = R[i] - L[i];
-    const int score = freq * len;
+    const int64 freq = R[i] - L[i];
+    const int64 score = freq * len;
     substr_index.emplace_back(i, score);
   }
 
@@ -163,8 +171,8 @@ TrainerModel::SentencePieces Trainer::MakeSeedSentencePieces() const {
 
   // Sort by the coverage of sub strings.
   for (const auto &p : Sorted(substr_index)) {
-    const int offset = SA[L[p.first]];
-    const int len = D[p.first];
+    const int64 offset = SA[L[p.first]];
+    const int64 len = D[p.first];
     CHECK_GT(len, 0);
     const char32 *begin = &array[offset];
     const char32 *end = &array[offset + len];
@@ -201,7 +209,7 @@ std::vector<float> Trainer::RunEStep(const TrainerModel &model, float *obj,
   }
 
   // Executes E step in parallel
-  for (int n = 0; n < trainer_spec_.num_threads(); ++n) {
+  for (int64 n = 0; n < trainer_spec_.num_threads(); ++n) {
     pool->Schedule([&, n]() {
       Lattice lattice;
       expected[n].resize(model.GetPieceSize(), 0.0);
@@ -222,7 +230,7 @@ std::vector<float> Trainer::RunEStep(const TrainerModel &model, float *obj,
   pool.reset(nullptr);
 
   // Merges expectations
-  for (int n = 1; n < trainer_spec_.num_threads(); ++n) {
+  for (int64 n = 1; n < trainer_spec_.num_threads(); ++n) {
     objs[0] += objs[n];
     ntokens[0] += ntokens[n];
     for (size_t k = 0; k < expected[0].size(); ++k) {
@@ -275,7 +283,7 @@ TrainerModel::SentencePieces Trainer::PruneSentencePieces(
 
   Lattice lattice;
   std::vector<bool> always_keep(sentencepieces.size(), true);
-  std::vector<std::vector<int>> alternatives(sentencepieces.size());
+  std::vector<std::vector<int64>> alternatives(sentencepieces.size());
 
   // First, segments the current sentencepieces to know
   // how each sentencepiece is resegmented if this sentencepiece is removed
@@ -307,15 +315,15 @@ TrainerModel::SentencePieces Trainer::PruneSentencePieces(
   // the set of sentence index where the sentencepieces[i] appears.
   float vsum = 0.0;
   std::vector<float> freq(sentencepieces.size(), 0.0);
-  std::vector<std::vector<int>> inverted(sentencepieces.size());
+  std::vector<std::vector<int64>> inverted(sentencepieces.size());
   {
     std::vector<float> vsums(trainer_spec_.num_threads(), 0.0);
     std::vector<std::vector<float>> freqs(trainer_spec_.num_threads());
-    std::vector<std::vector<std::vector<int>>> inverteds(
+    std::vector<std::vector<std::vector<int64>>> inverteds(
         trainer_spec_.num_threads());
 
     auto pool = port::MakeUnique<thread::ThreadPool>();
-    for (int n = 0; n < trainer_spec_.num_threads(); ++n) {
+    for (int64 n = 0; n < trainer_spec_.num_threads(); ++n) {
       freqs[n].resize(sentencepieces.size(), 0.0);
       inverteds[n].resize(sentencepieces.size());
 
@@ -338,7 +346,7 @@ TrainerModel::SentencePieces Trainer::PruneSentencePieces(
     }
     pool.reset(nullptr);
 
-    for (int n = 0; n < trainer_spec_.num_threads(); ++n) {
+    for (int64 n = 0; n < trainer_spec_.num_threads(); ++n) {
       vsum += vsums[n];
       for (size_t i = 0; i < sentencepieces.size(); ++i) {
         freq[i] += freqs[n][i];
@@ -350,7 +358,7 @@ TrainerModel::SentencePieces Trainer::PruneSentencePieces(
 
   const float sum = std::accumulate(freq.begin(), freq.end(), 0.0);
   const float logsum = log(sum);
-  std::vector<std::pair<int, float>> candidates;
+  std::vector<std::pair<int64, float>> candidates;
   TrainerModel::SentencePieces new_sentencepieces;
 
   // Finally, computes how likely the LM likelihood is reduced if
@@ -367,7 +375,7 @@ TrainerModel::SentencePieces Trainer::PruneSentencePieces(
       new_sentencepieces.push_back(sentencepieces[i]);
     } else {
       float F = 0.0;  // the frequency of sentencepieces[i].
-      for (const int n : inverted[i]) {
+      for (const int64 n : inverted[i]) {
         F += sentences_[n].second;
       }
       F /= vsum;  // normalizes by all sentence frequency.
@@ -383,7 +391,7 @@ TrainerModel::SentencePieces Trainer::PruneSentencePieces(
 
       // The frequencies of altenatives are increased by freq[i].
       float logprob_alt = 0.0;
-      for (const int n : alternatives[i]) {
+      for (const int64 n : alternatives[i]) {
         logprob_alt += (log(freq[n] + freq[i]) - logsum_alt);
       }
 
@@ -393,8 +401,8 @@ TrainerModel::SentencePieces Trainer::PruneSentencePieces(
     }
   }
 
-  const int pruned_size =
-      std::max<int>(desired_vocab_size_,
+  const int64 pruned_size =
+      std::max<int64>(desired_vocab_size_,
                     trainer_spec_.shrinking_factor() * sentencepieces.size());
 
   // Keeps trainer_spec_.shrinking_factor * sentencepieces.size() pieces.
@@ -432,7 +440,7 @@ TrainerModel::SentencePieces Trainer::FinalizeSentencePieces(
     }
   }
 
-  const int vocab_size_size = trainer_spec_.vocab_size() - meta_pieces_.size();
+  const int64 vocab_size_size = trainer_spec_.vocab_size() - meta_pieces_.size();
   CHECK_GT(vocab_size_size, 0);
 
   // Then keeps sentencepieces with higher scores.
@@ -473,7 +481,7 @@ util::Status Trainer::Train() {
 
   while (true) {
     // Sub-EM iteration.
-    for (int iter = 0; iter < trainer_spec_.num_sub_iterations(); ++iter) {
+    for (int64 iter = 0; iter < trainer_spec_.num_sub_iterations(); ++iter) {
       // Executes E step
       float objective = 0.0;
       int64 num_tokens = 0;

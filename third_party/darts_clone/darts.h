@@ -313,7 +313,9 @@ class DoubleArrayImpl {
 
 // <DoubleArray> is the typical instance of <DoubleArrayImpl>. It uses <int>
 // as the type of values and it is suitable for most cases.
-typedef DoubleArrayImpl<void, void, int, void> DoubleArray;
+
+//typedef DoubleArrayImpl<void, void, int, void> DoubleArray;
+typedef DoubleArrayImpl<void, void, int64, void> DoubleArray;
 
 // The interface section ends here. For using Darts-clone, there is no need
 // to read the remaining section, which gives the implementation of

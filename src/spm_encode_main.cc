@@ -65,10 +65,10 @@ int main(int argc, char *argv[]) {
 
   std::string line;
   std::vector<std::string> sps;
-  std::vector<int> ids;
+  std::vector<int64> ids;
   std::vector<std::vector<std::string>> nbest_sps;
-  std::vector<std::vector<int>> nbest_ids;
-  std::unordered_map<std::string, int> vocab;
+  std::vector<std::vector<int64>> nbest_ids;
+  std::unordered_map<std::string, int64> vocab;
   sentencepiece::SentencePieceText spt;
   sentencepiece::NBestSentencePieceText nbest_spt;
   std::function<void(const std::string &line)> process;

@@ -60,7 +60,7 @@ std::string Join(const std::vector<std::string> &tokens,
   return result;
 }
 
-std::string Join(const std::vector<int> &tokens, absl::string_view delim) {
+std::string Join(const std::vector<int64> &tokens, absl::string_view delim) {
   std::string result;
   char buf[32];
   if (!tokens.empty()) {
@@ -254,8 +254,8 @@ std::mt19937 *GetRandomGenerator() {
 
 namespace util {
 
-std::string StrError(int errnum) {
-  constexpr int kStrErrorSize = 1024;
+std::string StrError(int64 errnum) {
+  constexpr int64 kStrErrorSize = 1024;
   char buffer[kStrErrorSize];
   char *str = nullptr;
 #if defined(__GLIBC__) && defined(_GNU_SOURCE)
@@ -276,14 +276,14 @@ std::string StrError(int errnum) {
 #ifdef OS_WIN
 namespace win32 {
 std::wstring Utf8ToWide(const std::string &input) {
-  int output_length =
+  int64 output_length =
       ::MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1, nullptr, 0);
   output_length = output_length <= 0 ? 0 : output_length - 1;
   if (output_length == 0) {
     return L"";
   }
   std::unique_ptr<wchar_t[]> input_wide(new wchar_t[output_length + 1]);
-  const int result = ::MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1,
+  const int64 result = ::MultiByteToWideChar(CP_UTF8, 0, input.c_str(), -1,
                                            input_wide.get(), output_length + 1);
   std::wstring output;
   if (result > 0) {
@@ -293,14 +293,14 @@ std::wstring Utf8ToWide(const std::string &input) {
 }
 
 std::string WideToUtf8(const std::wstring &input) {
-  const int output_length = ::WideCharToMultiByte(CP_UTF8, 0, input.c_str(), -1,
+  const int64 output_length = ::WideCharToMultiByte(CP_UTF8, 0, input.c_str(), -1,
                                                   nullptr, 0, nullptr, nullptr);
   if (output_length == 0) {
     return "";
   }
 
   std::unique_ptr<char[]> input_encoded(new char[output_length + 1]);
-  const int result =
+  const int64 result =
       ::WideCharToMultiByte(CP_UTF8, 0, input.c_str(), -1, input_encoded.get(),
                             output_length + 1, nullptr, nullptr);
   std::string output;

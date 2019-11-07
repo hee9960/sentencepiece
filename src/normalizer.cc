@@ -24,7 +24,7 @@
 namespace sentencepiece {
 namespace normalizer {
 
-constexpr int Normalizer::kMaxTrieResultsSize;
+constexpr int64 Normalizer::kMaxTrieResultsSize;
 
 Normalizer::Normalizer(const NormalizerSpec &spec,
                        const TrainerSpec &trainer_spec)
@@ -74,7 +74,7 @@ util::Status Normalizer::Normalize(absl::string_view input,
 
   RETURN_IF_ERROR(status());
 
-  int consumed = 0;
+  int64 consumed = 0;
 
   // Ignores heading space.
   if (spec_->remove_extra_whitespaces()) {
@@ -161,7 +161,7 @@ util::Status Normalizer::Normalize(absl::string_view input,
     const absl::string_view space =
         spec_->escape_whitespaces() ? kSpaceSymbol : " ";
     while (string_util::EndsWith(*normalized, space)) {
-      const int length = normalized->size() - space.size();
+      const int64 length = normalized->size() - space.size();
       CHECK_GE_OR_RETURN(length, 0);
       consumed = (*norm_to_orig)[length];
       normalized->resize(length);
@@ -186,20 +186,20 @@ std::string Normalizer::Normalize(absl::string_view input) const {
   return normalized;
 }
 
-std::pair<absl::string_view, int> Normalizer::NormalizePrefix(
+std::pair<absl::string_view, int64> Normalizer::NormalizePrefix(
     absl::string_view input) const {
-  std::pair<absl::string_view, int> result;
+  std::pair<absl::string_view, int64> result;
 
   if (input.empty()) return result;
 
   if (matcher_ != nullptr) {
     bool found = false;
-    const int mblen = matcher_->PrefixMatch(input, &found);
+    const int64 mblen = matcher_->PrefixMatch(input, &found);
     if (found) return std::make_pair(input.substr(0, mblen), mblen);
   }
 
   size_t longest_length = 0;
-  int longest_value = 0;
+  int64 longest_value = 0;
 
   if (trie_ != nullptr) {
     // Allocates trie_results in stack, which makes the encoding speed 36%
@@ -285,29 +285,29 @@ PrefixMatcher::PrefixMatcher(const std::set<absl::string_view> &dic) {
   key.reserve(dic.size());
   for (const auto &it : dic) key.push_back(it.data());
   trie_ = port::MakeUnique<Darts::DoubleArray>();
-  CHECK_EQ(0, trie_->build(key.size(), const_cast<char **>(&key[0]), nullptr,
-                           nullptr));
+  
+  CHECK_EQ(0, trie_->build(key.size(), &key[0], nullptr, nullptr));
 }
 
-int PrefixMatcher::PrefixMatch(absl::string_view w, bool *found) const {
+int64 PrefixMatcher::PrefixMatch(absl::string_view w, bool *found) const {
   if (trie_ == nullptr) {
     if (found) *found = false;
-    return std::min<int>(w.size(), string_util::OneCharLen(w.data()));
+    return std::min<int64>(w.size(), string_util::OneCharLen(w.data()));
   }
 
-  constexpr int kResultSize = 64;
+  constexpr int64 kResultSize = 64;
   Darts::DoubleArray::result_pair_type trie_results[kResultSize];
-  const int num_nodes =
+  const int64 num_nodes =
       trie_->commonPrefixSearch(w.data(), trie_results, kResultSize, w.size());
 
   if (found) *found = (num_nodes > 0);
   if (num_nodes == 0) {
-    return std::min<int>(w.size(), string_util::OneCharLen(w.data()));
+    return std::min<int64>(w.size(), string_util::OneCharLen(w.data()));
   }
 
-  int mblen = 0;
-  for (int i = 0; i < num_nodes; ++i) {
-    mblen = std::max<int>(trie_results[i].length, mblen);
+  int64 mblen = 0;
+  for (int64 i = 0; i < num_nodes; ++i) {
+    mblen = std::max<int64>(trie_results[i].length, mblen);
   }
 
   return mblen;
@@ -318,7 +318,7 @@ std::string PrefixMatcher::GlobalReplace(absl::string_view w,
   std::string result;
   while (!w.empty()) {
     bool found = false;
-    const int mblen = PrefixMatch(w, &found);
+    const int64 mblen = PrefixMatch(w, &found);
     if (found) {
       result.append(out.data(), out.size());
     } else {

@@ -41,7 +41,7 @@ class PrefixMatcher {
   // Returns the UTF8 byte length of matched string.
   // `found` is set if a prefix match exists.
   // If no entry is found, consumes one Unicode character.
-  int PrefixMatch(absl::string_view w, bool *found = nullptr) const;
+  int64 PrefixMatch(absl::string_view w, bool *found = nullptr) const;
 
   // Replaces entries in `w` with `out`.
   std::string GlobalReplace(absl::string_view w, absl::string_view out) const;
@@ -112,7 +112,7 @@ class Normalizer {
   //   output.append(p.first.data(), p.first.size());
   //   input.remove_prefix(p.second);
   // }
-  std::pair<absl::string_view, int> NormalizePrefix(
+  std::pair<absl::string_view, int64> NormalizePrefix(
       absl::string_view input) const;
 
   // Encodes trie_blob and normalized string and return compiled blob.
@@ -126,7 +126,7 @@ class Normalizer {
 
   // Maximum size of the return value of Trie, which corresponds
   // to the maximum size of shared common prefix in the chars map.
-  static constexpr int kMaxTrieResultsSize = 32;
+  static constexpr int64 kMaxTrieResultsSize = 32;
 
   // Internal trie for efficient longest matching.
   std::unique_ptr<Darts::DoubleArray> trie_;

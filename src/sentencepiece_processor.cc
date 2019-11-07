@@ -132,14 +132,14 @@ util::Status SentencePieceProcessor::SetVocabulary(
     const std::vector<std::string> &valid_vocab) {
   RETURN_IF_ERROR(status());
 
-  // TODO(taku): supports vocabulary constraint in BPE model.
+  // TODO(taku): supports vocabulary constraint64 in BPE model.
   const auto type = model_proto_->trainer_spec().model_type();
   CHECK_OR_RETURN(type == TrainerSpec::UNIGRAM || type == TrainerSpec::BPE)
-      << "Vocabulary constraint is only enabled in subword units.";
+      << "Vocabulary constraint64 is only enabled in subword units.";
 
   const std::set<std::string> vocab(valid_vocab.begin(), valid_vocab.end());
 
-  for (int i = 0; i < model_proto_->pieces_size(); ++i) {
+  for (int64 i = 0; i < model_proto_->pieces_size(); ++i) {
     auto *piece = model_proto_->mutable_pieces(i);
     if (piece->type() == ModelProto::SentencePiece::CONTROL ||
         piece->type() == ModelProto::SentencePiece::UNKNOWN ||
@@ -169,7 +169,7 @@ util::Status SentencePieceProcessor::ResetVocabulary() {
 }
 
 util::Status SentencePieceProcessor::LoadVocabulary(
-    util::min_string_view filename, int threshold) {
+    util::min_string_view filename, int64 threshold) {
   auto input = filesystem::NewReadableFile(string_util::ToSV(filename));
   RETURN_IF_ERROR(input->status());
 
@@ -214,7 +214,7 @@ util::Status SentencePieceProcessor::Encode(
 }
 
 util::Status SentencePieceProcessor::Encode(util::min_string_view input,
-                                            std::vector<int> *ids) const {
+                                            std::vector<int64> *ids) const {
   CHECK_OR_RETURN_STATUS_STL(ids);
 
   SentencePieceText spt;
@@ -237,7 +237,7 @@ util::Status SentencePieceProcessor::Decode(
   return util::OkStatus();
 }
 
-util::Status SentencePieceProcessor::Decode(const std::vector<int> &ids,
+util::Status SentencePieceProcessor::Decode(const std::vector<int64> &ids,
                                             std::string *detokenized) const {
   CHECK_OR_RETURN_STATUS_STL(detokenized);
 
@@ -249,7 +249,7 @@ util::Status SentencePieceProcessor::Decode(const std::vector<int> &ids,
 }
 
 util::Status SentencePieceProcessor::NBestEncode(
-    util::min_string_view input, int nbest_size,
+    util::min_string_view input, int64 nbest_size,
     std::vector<std::vector<std::string>> *pieces) const {
   CHECK_OR_RETURN_STATUS_STL(pieces);
 
@@ -267,14 +267,14 @@ util::Status SentencePieceProcessor::NBestEncode(
 }
 
 util::Status SentencePieceProcessor::NBestEncode(
-    util::min_string_view input, int nbest_size,
-    std::vector<std::vector<int>> *ids) const {
+    util::min_string_view input, int64 nbest_size,
+    std::vector<std::vector<int64>> *ids) const {
   CHECK_OR_RETURN_STATUS_STL(ids);
 
   NBestSentencePieceText spt;
   RETURN_IF_ERROR(NBestEncode(input, nbest_size, &spt));
   for (const auto &nbest : spt.nbests()) {
-    std::vector<int> result;
+    std::vector<int64> result;
     for (const auto &sp : nbest.pieces()) {
       result.emplace_back(sp.id());
     }
@@ -285,7 +285,7 @@ util::Status SentencePieceProcessor::NBestEncode(
 }
 
 util::Status SentencePieceProcessor::SampleEncode(
-    util::min_string_view input, int nbest_size, float alpha,
+    util::min_string_view input, int64 nbest_size, float alpha,
     std::vector<std::string> *pieces) const {
   CHECK_OR_RETURN_STATUS_STL(pieces);
 
@@ -299,8 +299,8 @@ util::Status SentencePieceProcessor::SampleEncode(
 }
 
 util::Status SentencePieceProcessor::SampleEncode(util::min_string_view input,
-                                                  int nbest_size, float alpha,
-                                                  std::vector<int> *ids) const {
+                                                  int64 nbest_size, float alpha,
+                                                  std::vector<int64> *ids) const {
   CHECK_OR_RETURN_STATUS_STL(ids);
 
   SentencePieceText spt;
@@ -320,7 +320,7 @@ util::Status SentencePieceProcessor::PopulateSentencePieceText(
   bool is_prev_unk = false;
   for (const auto &p : result) {
     const absl::string_view w = p.first;  // piece
-    const int id = p.second;              // id
+    const int64 id = p.second;              // id
 
     CHECK_OR_RETURN(!w.empty()) << "Empty piece is not allowed.";
 
@@ -394,7 +394,7 @@ util::Status SentencePieceProcessor::Encode(util::min_string_view input,
 }
 
 util::Status SentencePieceProcessor::NBestEncode(
-    util::min_string_view input, int nbest_size,
+    util::min_string_view input, int64 nbest_size,
     NBestSentencePieceText *nbest_spt) const {
   CHECK_OR_RETURN_STATUS_PROTO(nbest_spt);
 
@@ -417,7 +417,7 @@ util::Status SentencePieceProcessor::NBestEncode(
 }
 
 util::Status SentencePieceProcessor::SampleEncode(
-    util::min_string_view input, int nbest_size, float alpha,
+    util::min_string_view input, int64 nbest_size, float alpha,
     SentencePieceText *spt) const {
   CHECK_OR_RETURN_STATUS_PROTO(spt);
 
@@ -442,7 +442,7 @@ util::Status SentencePieceProcessor::SampleEncode(
     }
 
     auto *mt = random::GetRandomGenerator();
-    std::discrete_distribution<int> dist(probs.begin(), probs.end());
+    std::discrete_distribution<int64> dist(probs.begin(), probs.end());
     RETURN_IF_ERROR(PopulateSentencePieceText(input, normalized, norm_to_orig,
                                               nbests[dist(*mt)].first, spt));
 
@@ -463,7 +463,7 @@ util::Status SentencePieceProcessor::Decode(
   if (model_proto_ && model_proto_->trainer_spec().has_unk_surface())
     unk_surface = model_proto_->trainer_spec().unk_surface().c_str();
 
-  auto DecodeSentencePiece = [&](absl::string_view piece, int id,
+  auto DecodeSentencePiece = [&](absl::string_view piece, int64 id,
                                  bool is_bos_ws) -> std::string {
     if (IsControl(id)) {  // <s>, </s>
       return "";          // invisible symbol.
@@ -503,10 +503,10 @@ util::Status SentencePieceProcessor::Decode(
   return util::OkStatus();
 }
 
-util::Status SentencePieceProcessor::Decode(const std::vector<int> &ids,
+util::Status SentencePieceProcessor::Decode(const std::vector<int64> &ids,
                                             SentencePieceText *spt) const {
   std::vector<std::string> pieces;
-  for (const int id : ids) {
+  for (const int64 id : ids) {
     pieces.emplace_back(IdToPiece(id));
   }
   return Decode(pieces, spt);
@@ -520,14 +520,14 @@ util::bytes SentencePieceProcessor::EncodeAsSerializedProto(
 }
 
 util::bytes SentencePieceProcessor::SampleEncodeAsSerializedProto(
-    util::min_string_view input, int nbest_size, float alpha) const {
+    util::min_string_view input, int64 nbest_size, float alpha) const {
   SentencePieceText spt;
   if (!SampleEncode(input, nbest_size, alpha, &spt).ok()) return "";
   return spt.SerializeAsString();
 }
 
 util::bytes SentencePieceProcessor::NBestEncodeAsSerializedProto(
-    util::min_string_view input, int nbest_size) const {
+    util::min_string_view input, int64 nbest_size) const {
   NBestSentencePieceText spt;
   if (!NBestEncode(input, nbest_size, &spt).ok()) return "";
   return spt.SerializeAsString();
@@ -541,7 +541,7 @@ util::bytes SentencePieceProcessor::DecodePiecesAsSerializedProto(
 }
 
 util::bytes SentencePieceProcessor::DecodeIdsAsSerializedProto(
-    const std::vector<int> &ids) const {
+    const std::vector<int64> &ids) const {
   SentencePieceText spt;
   if (!Decode(ids, &spt).ok()) return "";
   return spt.SerializeAsString();
@@ -554,62 +554,62 @@ util::bytes SentencePieceProcessor::DecodeIdsAsSerializedProto(
     return value;                                                        \
   }
 
-int SentencePieceProcessor::GetPieceSize() const {
+int64 SentencePieceProcessor::GetPieceSize() const {
   CHECK_STATUS_OR_RETURN_DEFAULT(0);
   return model_->GetPieceSize();
 }
 
-int SentencePieceProcessor::PieceToId(util::min_string_view piece) const {
+int64 SentencePieceProcessor::PieceToId(util::min_string_view piece) const {
   CHECK_STATUS_OR_RETURN_DEFAULT(0);
   return model_->PieceToId(string_util::ToSV(piece));
 }
 
-const std::string &SentencePieceProcessor::IdToPiece(int id) const {
+const std::string &SentencePieceProcessor::IdToPiece(int64 id) const {
   static const std::string *kEmptyString = new std::string;
   CHECK_STATUS_OR_RETURN_DEFAULT(*kEmptyString);
   return model_->IdToPiece(id);
 }
 
-float SentencePieceProcessor::GetScore(int id) const {
+float SentencePieceProcessor::GetScore(int64 id) const {
   CHECK_STATUS_OR_RETURN_DEFAULT(0.0);
   return model_->GetScore(id);
 }
 
-bool SentencePieceProcessor::IsControl(int id) const {
+bool SentencePieceProcessor::IsControl(int64 id) const {
   CHECK_STATUS_OR_RETURN_DEFAULT(0);
   return model_->IsControl(id);
 }
 
-bool SentencePieceProcessor::IsUnknown(int id) const {
+bool SentencePieceProcessor::IsUnknown(int64 id) const {
   CHECK_STATUS_OR_RETURN_DEFAULT(0);
   return model_->IsUnknown(id);
 }
 
-bool SentencePieceProcessor::IsUnused(int id) const {
+bool SentencePieceProcessor::IsUnused(int64 id) const {
   CHECK_STATUS_OR_RETURN_DEFAULT(false);
   return model_->IsUnused(id);
 }
 
-int SentencePieceProcessor::unk_id() const {
-  const int id = PieceToId(util::min_string_view(model_->unk_piece().data()));
+int64 SentencePieceProcessor::unk_id() const {
+  const int64 id = PieceToId(util::min_string_view(model_->unk_piece().data()));
   if (IsUnknown(id)) return id;
   return -1;
 }
 
-int SentencePieceProcessor::bos_id() const {
-  const int id = PieceToId(util::min_string_view(model_->bos_piece().data()));
+int64 SentencePieceProcessor::bos_id() const {
+  const int64 id = PieceToId(util::min_string_view(model_->bos_piece().data()));
   if (IsControl(id)) return id;
   return -1;
 }
 
-int SentencePieceProcessor::eos_id() const {
-  const int id = PieceToId(util::min_string_view(model_->eos_piece().data()));
+int64 SentencePieceProcessor::eos_id() const {
+  const int64 id = PieceToId(util::min_string_view(model_->eos_piece().data()));
   if (IsControl(id)) return id;
   return -1;
 }
 
-int SentencePieceProcessor::pad_id() const {
-  const int id = PieceToId(util::min_string_view(model_->pad_piece().data()));
+int64 SentencePieceProcessor::pad_id() const {
+  const int64 id = PieceToId(util::min_string_view(model_->pad_piece().data()));
   if (IsControl(id)) return id;
   return -1;
 }
@@ -634,7 +634,7 @@ util::Status SentencePieceProcessor::ApplyExtraOptions(
       case BOS: {
         auto *array = spt->mutable_pieces();
         array->Add();
-        for (int i = array->size() - 1; i > 0; --i) {
+        for (int64 i = array->size() - 1; i > 0; --i) {
           array->SwapElements(i - 1, i);
         }
         auto *piece = array->Mutable(0);

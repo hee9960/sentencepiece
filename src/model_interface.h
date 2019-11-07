@@ -15,6 +15,7 @@
 #ifndef MODEL_INTERFACE_H_
 #define MODEL_INTERFACE_H_
 
+#include <cstdint>
 #include <memory>
 #include <set>
 #include <string>
@@ -36,7 +37,7 @@ namespace sentencepiece {
 std::vector<absl::string_view> SplitIntoWords(absl::string_view text,
                                               bool add_ws_as_suffix = false);
 
-using EncodeResult = std::vector<std::pair<absl::string_view, int>>;
+using EncodeResult = std::vector<std::pair<absl::string_view, int64>>;
 using NBestEncodeResult = std::vector<std::pair<EncodeResult, float>>;
 
 class ModelProto;
@@ -46,7 +47,7 @@ class ModelProto;
 class ModelInterface {
  public:
   using PieceToIdMap =
-      std::unordered_map<absl::string_view, int, string_util::string_view_hash>;
+      std::unordered_map<absl::string_view, int64, string_util::string_view_hash>;
 
   absl::string_view unk_piece() const;
   absl::string_view bos_piece() const;
@@ -75,7 +76,7 @@ class ModelInterface {
 
   // The same as above, but returns nbest result with score.
   virtual NBestEncodeResult NBestEncode(absl::string_view normalized,
-                                        int nbest_size) const {
+                                        int64 nbest_size) const {
     LOG(ERROR) << "Not implemented.";
     return NBestEncodeResult();
   }
@@ -88,45 +89,45 @@ class ModelInterface {
 
   // Returns the vocab id of `piece`.
   // Returns UNK(0) if `piece` is unknown
-  virtual int PieceToId(absl::string_view piece) const;
+  virtual int64 PieceToId(absl::string_view piece) const;
 
   // Returns the string representation of vocab with `id`.
   // id must be 0 <= id < GetPieceSize().
-  virtual const std::string &IdToPiece(int id) const {
+  virtual const std::string &IdToPiece(int64 id) const {
     return model_proto_->pieces(id).piece();
   }
 
   // Returns the size of sentence pieces, which is the same
   // as the size of vocabulary for NMT.
-  virtual int GetPieceSize() const { return model_proto_->pieces_size(); }
+  virtual int64 GetPieceSize() const { return model_proto_->pieces_size(); }
 
   // Returns the score of `id`.
   // Score represents a log probability of the piece.
   // We can roughly estimate the unigram frequency of the piece.
-  virtual float GetScore(int id) const {
+  virtual float GetScore(int64 id) const {
     return model_proto_->pieces(id).score();
   }
 
   // Returns true if `id` is unknown symbol.
-  virtual bool IsUnknown(int id) const {
+  virtual bool IsUnknown(int64 id) const {
     return (model_proto_->pieces(id).type() ==
             ModelProto::SentencePiece::UNKNOWN);
   }
 
   // Returns true if `id` is control symbol.
-  virtual bool IsControl(int id) const {
+  virtual bool IsControl(int64 id) const {
     return (model_proto_->pieces(id).type() ==
             ModelProto::SentencePiece::CONTROL);
   }
 
   // Returns true if `id` is unused symbol.
-  virtual bool IsUnused(int id) const {
+  virtual bool IsUnused(int64 id) const {
     return (model_proto_->pieces(id).type() ==
             ModelProto::SentencePiece::UNUSED);
   }
 
   // Returns true if `id` is user defined symbol.
-  virtual bool IsUserDefined(int id) const {
+  virtual bool IsUserDefined(int64 id) const {
     return (model_proto_->pieces(id).type() ==
             ModelProto::SentencePiece::USER_DEFINED);
   }
@@ -135,26 +136,26 @@ class ModelInterface {
   void InitializePieces();
 
   // Non-virtual (inlined) implementation for faster execution.
-  inline float GetScoreInlined(int id) const {
+  inline float GetScoreInlined(int64 id) const {
     return model_proto_->pieces(id).score();
   }
 
-  inline bool IsUnknownInlined(int id) const {
+  inline bool IsUnknownInlined(int64 id) const {
     return (model_proto_->pieces(id).type() ==
             ModelProto::SentencePiece::UNKNOWN);
   }
 
-  inline bool IsControlInlined(int id) const {
+  inline bool IsControlInlined(int64 id) const {
     return (model_proto_->pieces(id).type() ==
             ModelProto::SentencePiece::CONTROL);
   }
 
-  inline bool IsUnusedInlined(int id) const {
+  inline bool IsUnusedInlined(int64 id) const {
     return (model_proto_->pieces(id).type() ==
             ModelProto::SentencePiece::UNUSED);
   }
 
-  inline bool IsUserDefinedInlined(int id) const {
+  inline bool IsUserDefinedInlined(int64 id) const {
     return (model_proto_->pieces(id).type() ==
             ModelProto::SentencePiece::USER_DEFINED);
   }
@@ -171,7 +172,7 @@ class ModelInterface {
   PieceToIdMap reserved_id_map_;
 
   // unknown id.
-  int unk_id_ = 0;
+  int64 unk_id_ = 0;
 
   // status.
   util::Status status_;

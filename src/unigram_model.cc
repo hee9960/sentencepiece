@@ -36,7 +36,7 @@ constexpr size_t kPreallocateLatticeNodeSize = 1024;
 // Returns log(exp(x) + exp(y)).
 // if init_mode is true, returns log(exp(y)) == y.
 // log(\sum_i exp(a[i])) can be computed as
-// for (int i = 0; i < a.size(); ++i)
+// for (int64 i = 0; i < a.size(); ++i)
 //   x = LogSumExp(x, a[i], i == 0);
 inline float LogSumExp(float x, float y, bool init_mode) {
   if (init_mode) {
@@ -56,24 +56,24 @@ inline float LogSumExp(float x, float y, bool init_mode) {
 Lattice::Lattice() : node_allocator_(kPreallocateLatticeNodeSize) {}
 Lattice::~Lattice() {}
 
-const std::vector<Lattice::Node *> &Lattice::begin_nodes(int pos) const {
+const std::vector<Lattice::Node *> &Lattice::begin_nodes(int64 pos) const {
   return begin_nodes_[pos];
 }
 
-const std::vector<Lattice::Node *> &Lattice::end_nodes(int pos) const {
+const std::vector<Lattice::Node *> &Lattice::end_nodes(int64 pos) const {
   return end_nodes_[pos];
 }
 
-int Lattice::size() const {
+int64 Lattice::size() const {
   // -1 because surface_ may include the EOS.
-  return std::max<int>(0, surface_.size() - 1);
+  return std::max<int64>(0, surface_.size() - 1);
 }
 
-int Lattice::utf8_size() const { return sentence_.size(); }
+int64 Lattice::utf8_size() const { return sentence_.size(); }
 
 const char *Lattice::sentence() const { return sentence_.data(); }
 
-const char *Lattice::surface(int pos) const { return surface_[pos]; }
+const char *Lattice::surface(int64 pos) const { return surface_[pos]; }
 
 Lattice::Node *Lattice::bos_node() const { return end_nodes_[0][0]; }
 
@@ -100,19 +100,19 @@ void Lattice::SetSentence(absl::string_view sentence) {
   surface_.reserve(sentence.size() + 1);
 
   while (!sentence.empty()) {
-    const int mblen = std::min<int>(string_util::OneCharLen(sentence.data()),
+    const int64 mblen = std::min<int64>(string_util::OneCharLen(sentence.data()),
                                     sentence.size());
     surface_.push_back(sentence.data());
     sentence.remove_prefix(mblen);
   }
   surface_.push_back(sentence.data());
 
-  const int len = size();
+  const int64 len = size();
   begin_nodes_.resize(len + 1);
   end_nodes_.resize(len + 1);
 
   constexpr size_t kReservedNodeSize = 16;
-  for (int i = 0; i <= len; ++i) {
+  for (int64 i = 0; i <= len; ++i) {
     begin_nodes_[i].reserve(kReservedNodeSize);
     end_nodes_[i].reserve(kReservedNodeSize);
   }
@@ -128,12 +128,12 @@ void Lattice::SetSentence(absl::string_view sentence) {
   begin_nodes_[len].push_back(eos);
 }
 
-Lattice::Node *Lattice::Insert(int pos, int length) {
+Lattice::Node *Lattice::Insert(int64 pos, int64 length) {
   Node *node = NewNode();
   node->pos = pos;
   node->length = length;
-  const int utf8_length =
-      static_cast<int>(surface(pos + length) - surface(pos));
+  const int64 utf8_length =
+      static_cast<int64>(surface(pos + length) - surface(pos));
   node->piece = absl::string_view(surface(pos), utf8_length);
   begin_nodes_[pos].push_back(node);
   end_nodes_[pos + node->length].push_back(node);
@@ -142,9 +142,9 @@ Lattice::Node *Lattice::Insert(int pos, int length) {
 }
 
 std::vector<Lattice::Node *> Lattice::Viterbi() {
-  const int len = size();
+  const int64 len = size();
 
-  for (int pos = 0; pos <= len; ++pos) {
+  for (int64 pos = 0; pos <= len; ++pos) {
     for (Node *rnode : begin_nodes_[pos]) {
       rnode->prev = nullptr;
       float best_score = 0.0;
@@ -181,14 +181,14 @@ float Lattice::PopulateMarginal(float freq,
                                 std::vector<float> *expected) const {
   if (expected == nullptr) return 0.0;
 
-  const int len = size();
+  const int64 len = size();
 
   // alpha and beta (accumulative log prob) in Forward Backward.
   // the index of alpha/beta is Node::node_id.
   std::vector<float> alpha(node_allocator_.size(), 0.0);
   std::vector<float> beta(node_allocator_.size(), 0.0);
 
-  for (int pos = 0; pos <= len; ++pos) {
+  for (int64 pos = 0; pos <= len; ++pos) {
     for (Node *rnode : begin_nodes_[pos]) {
       for (Node *lnode : end_nodes_[pos]) {
         alpha[rnode->node_id] = LogSumExp(alpha[rnode->node_id],
@@ -198,7 +198,7 @@ float Lattice::PopulateMarginal(float freq,
     }
   }
 
-  for (int pos = len; pos >= 0; --pos) {
+  for (int64 pos = len; pos >= 0; --pos) {
     for (Node *lnode : end_nodes_[pos]) {
       for (Node *rnode : begin_nodes_[pos]) {
         beta[lnode->node_id] =
@@ -209,7 +209,7 @@ float Lattice::PopulateMarginal(float freq,
   }
 
   const float Z = alpha[begin_nodes_[len][0]->node_id];
-  for (int pos = 0; pos < len; ++pos) {
+  for (int64 pos = 0; pos < len; ++pos) {
     for (Node *node : begin_nodes_[pos]) {
       if (node->id >= 0) {
         // the index of |expected| is a Node::id, which is a vocabulary id.
@@ -305,14 +305,14 @@ std::vector<std::vector<Lattice::Node *>> Lattice::NBest(size_t nbest_size) {
     // When the input is too long or contains duplicated phrases,
     // `agenda` will get extremely big. Here we avoid this case by
     // dynamically shrinking the agenda.
-    constexpr int kMaxAgendaSize = 100000;
-    constexpr int kMinAgendaSize = 512;
+    constexpr int64 kMaxAgendaSize = 100000;
+    constexpr int64 kMinAgendaSize = 512;
     if (agenda.size() >= kMaxAgendaSize) {
       LOG(WARNING) << "Too big agenda. shrinking";
       // Keeps the top `kMinAgendaSize` hypothesis.
       Agenda new_agenda;
-      const int size = std::min<int>(kMinAgendaSize, nbest_size * 10);
-      for (int i = 0; i < size; ++i) {
+      const int64 size = std::min<int64>(kMinAgendaSize, nbest_size * 10);
+      for (int64 i = 0; i < size; ++i) {
         new_agenda.push(agenda.top());
         agenda.pop();
       }
@@ -324,12 +324,12 @@ std::vector<std::vector<Lattice::Node *>> Lattice::NBest(size_t nbest_size) {
 }
 
 std::vector<Lattice::Node *> Lattice::Sample(float theta) {
-  const int len = size();
+  const int64 len = size();
   if (len == 0) return {};
 
   std::vector<float> alpha(node_allocator_.size(), 0.0);
 
-  for (int pos = 0; pos <= len; ++pos) {
+  for (int64 pos = 0; pos <= len; ++pos) {
     for (Node *rnode : begin_nodes_[pos]) {
       for (Node *lnode : end_nodes_[pos]) {
         alpha[rnode->node_id] = LogSumExp(
@@ -351,7 +351,7 @@ std::vector<Lattice::Node *> Lattice::Sample(float theta) {
     for (const Node *lnode : end_nodes_[node->pos]) {
       probs.push_back(exp(alpha[lnode->node_id] + theta * lnode->score - Z));
     }
-    std::discrete_distribution<int> dist(probs.begin(), probs.end());
+    std::discrete_distribution<int64> dist(probs.begin(), probs.end());
     node = end_nodes_[node->pos][dist(*mt)];
     if (node == bos_node()) break;
 
@@ -367,8 +367,8 @@ std::vector<Lattice::Node *> Lattice::Sample(float theta) {
 // Model::~Model() {}
 
 void Model::PopulateNodes(Lattice *lattice) const {
-  auto get_chars_length = [&lattice](int begin_pos, const char *end) {
-    int pos = begin_pos;
+  auto get_chars_length = [&lattice](int64 begin_pos, const char *end) {
+    int64 pos = begin_pos;
     while (lattice->surface(pos) < end) ++pos;
     return pos - begin_pos;
   };
@@ -376,29 +376,29 @@ void Model::PopulateNodes(Lattice *lattice) const {
   constexpr float kUnkPenalty = 10.0;
   const float unk_score = min_score() - kUnkPenalty;
 
-  const int len = lattice->size();
+  const int64 len = lattice->size();
   const char *end = lattice->sentence() + lattice->utf8_size();
 
   // +1 just in case.
   std::vector<Darts::DoubleArray::result_pair_type> trie_results(
       trie_results_size_ + 1);
 
-  for (int begin_pos = 0; begin_pos < len; ++begin_pos) {
+  for (int64 begin_pos = 0; begin_pos < len; ++begin_pos) {
     const char *begin = lattice->surface(begin_pos);
 
     // Finds all pieces which are prefix of surface(begin_pos).
     const size_t num_nodes = trie_->commonPrefixSearch(
         begin, trie_results.data(), trie_results.size(),
-        static_cast<int>(end - begin));
+        static_cast<int64>(end - begin));
     CHECK_LT(num_nodes, trie_results.size());
 
     bool has_single_node = false;
 
     // Inserts pieces to the lattice.
     for (size_t k = 0; k < num_nodes; ++k) {
-      const int length =
+      const int64 length =
           get_chars_length(begin_pos, begin + trie_results[k].length);
-      const int id = trie_results[k].value;
+      const int64 id = trie_results[k].value;
       if (IsUnusedInlined(id)) continue;
       Lattice::Node *node = lattice->Insert(begin_pos, length);
       node->id = id;  // the value of Trie stores vocab_id.
@@ -418,17 +418,17 @@ void Model::PopulateNodes(Lattice *lattice) const {
   }
 }
 
-int Model::PieceToId(absl::string_view piece) const {
+int64 Model::PieceToId(absl::string_view piece) const {
   auto it = reserved_id_map_.find(piece);
   if (it != reserved_id_map_.end()) {
     return it->second;
   }
-  int id = 0;
+  int64 id = 0;
   trie_->exactMatchSearch(piece.data(), id);
   return id == -1 ? unk_id_ : id;
 }
 
-void Model::BuildTrie(std::vector<std::pair<absl::string_view, int>> *pieces) {
+void Model::BuildTrie(std::vector<std::pair<absl::string_view, int64>> *pieces) {
   if (!status().ok()) return;
 
   if (pieces->empty()) {
@@ -442,26 +442,25 @@ void Model::BuildTrie(std::vector<std::pair<absl::string_view, int>> *pieces) {
 
   // Makes key/value set for DoubleArrayTrie.
   std::vector<const char *> key(pieces->size());
-  std::vector<int> value(pieces->size());
+  std::vector<int64> value(pieces->size());
   for (size_t i = 0; i < pieces->size(); ++i) {
     key[i] = (*pieces)[i].first.data();  // sorted piece.
     value[i] = (*pieces)[i].second;      // vocab_id
   }
 
   trie_ = port::MakeUnique<Darts::DoubleArray>();
-  if (trie_->build(key.size(), const_cast<char **>(&key[0]), nullptr,
-                   &value[0]) != 0) {
+  if (trie_->build(key.size(), &key[0], nullptr, &value[0]) != 0) {
     status_ = util::InternalError("cannot build double-array.");
     return;
   }
 
   // Computes the maximum number of shared prefixes in the trie.
-  const int kMaxTrieResultsSize = 1024;
+  const int64 kMaxTrieResultsSize = 1024;
   std::vector<Darts::DoubleArray::result_pair_type> results(
       kMaxTrieResultsSize);
   trie_results_size_ = 0;
   for (const auto &p : *pieces) {
-    const int num_nodes = trie_->commonPrefixSearch(
+    const int64 num_nodes = trie_->commonPrefixSearch(
         p.first.data(), results.data(), results.size(), p.first.size());
     trie_results_size_ = std::max(trie_results_size_, num_nodes);
   }
@@ -486,7 +485,7 @@ Model::Model(const ModelProto &model_proto) {
     }
   }
 
-  std::vector<std::pair<absl::string_view, int>> pieces;
+  std::vector<std::pair<absl::string_view, int64>> pieces;
   for (const auto &it : pieces_) pieces.emplace_back(it.first, it.second);
 
   BuildTrie(&pieces);
@@ -512,12 +511,12 @@ EncodeResult Model::Encode(absl::string_view normalized) const {
 }
 
 NBestEncodeResult Model::NBestEncode(absl::string_view normalized,
-                                     int nbest_size) const {
+                                     int64 nbest_size) const {
   if (!status().ok() || normalized.empty()) {
     return {{{}, 0.0}};
   }
 
-  nbest_size = std::max<int>(1, std::min<int>(nbest_size, 1024));
+  nbest_size = std::max<int64>(1, std::min<int64>(nbest_size, 1024));
 
   Lattice lattice;
   lattice.SetSentence(normalized);

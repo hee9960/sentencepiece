@@ -42,7 +42,7 @@ class Trainer : public TrainerInterface {
     const Symbol *right;             // right symbol in bigram
     string_util::UnicodeText chars;  // all flattend chracter sequence
     bool is_unk;                     // true if this symbol is unknown.
-    uint64 fp;                       // fingerprint of this symbol.
+    uint64 fp;                       // fingerprint64 of this symbol.
     uint64 freq;                     // frequency of this symbol.
 
     // Position list. Use set so that we can keep the order of occurrence.
@@ -55,14 +55,14 @@ class Trainer : public TrainerInterface {
   };
 
   struct Position {
-    int sid;    // sentence id
-    int left;   // left symbol index
-    int right;  // right symbol index
+    int64 sid;    // sentence id
+    int64 left;   // left symbol index
+    int64 right;  // right symbol index
   };
 
   // Encodes sid, left and right bigram index into uint64.
   // Encoded value keeps the order of sid, left and right.
-  static uint64 EncodePos(int sid, int l, int r) {
+  static uint64 EncodePos(int64 sid, int64 l, int64 r) {
     CHECK_GE(l, 0);
     CHECK_GE(r, 0);
     CHECK_LE(l, kuint16max);
@@ -91,24 +91,24 @@ class Trainer : public TrainerInterface {
   void ComputeFreq(Symbol *symbol) const;
 
   // Returns the valid index before symbols_[sid][index].
-  int GetNextIndex(int sid, int index) const;
+  int64 GetNextIndex(int64 sid, int64 index) const;
 
   // Returns the valid index after symbols_[sid][index].
-  int GetPrevIndex(int sid, int index) const;
+  int64 GetPrevIndex(int64 sid, int64 index) const;
 
   // Makes a new bigram from [symbols_[sid][left], symbols_[sid][right]] and
   // Adds it to symbols_cache_ and active_symbols_.
-  void AddNewPair(int sid, int left, int right);
+  void AddNewPair(int64 sid, int64 left, int64 right);
 
   // Resets the fequency of bigram [symbols_[sid][left] symbols_[sid][right]],
   // if this bigram is not |best|.
-  void ResetFreq(int sid, int left, int right, const Symbol *best);
+  void ResetFreq(int64 sid, int64 left, int64 right, const Symbol *best);
 
   // Updates |active_symbols_| by copying the top 5% frequent symbols in
   // symbols_cache_.
   void UpdateActiveSymbols();
 
-  // All unique symbols. Key is a fingerprint of Symbol.
+  // All unique symbols. Key is a fingerprint64 of Symbol.
   std::unordered_map<uint64, Symbol *> symbols_cache_;
 
   // Set of symbols from which we find the best symbol in each iteration.

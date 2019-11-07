@@ -108,7 +108,7 @@ void Trainer::ComputeFreq(Symbol *symbol) const {
   }
 }
 
-int Trainer::GetNextIndex(int sid, int index) const {
+int64 Trainer::GetNextIndex(int64 sid, int64 index) const {
   for (size_t i = index + 1; i < symbols_[sid].size(); ++i) {
     if (symbols_[sid][i] == nullptr) continue;
     return i;
@@ -116,15 +116,15 @@ int Trainer::GetNextIndex(int sid, int index) const {
   return -1;
 }
 
-int Trainer::GetPrevIndex(int sid, int index) const {
-  for (int i = index - 1; i >= 0; --i) {
+int64 Trainer::GetPrevIndex(int64 sid, int64 index) const {
+  for (int64 i = index - 1; i >= 0; --i) {
     if (symbols_[sid][i] == nullptr) continue;
     return i;
   }
   return -1;
 }
 
-void Trainer::AddNewPair(int sid, int left, int right) {
+void Trainer::AddNewPair(int64 sid, int64 left, int64 right) {
   if (left == -1 || right == -1) return;
   auto *symbol = GetPairSymbol(symbols_[sid][left], symbols_[sid][right]);
   if (symbol != nullptr) {
@@ -133,7 +133,7 @@ void Trainer::AddNewPair(int sid, int left, int right) {
   }
 }
 
-void Trainer::ResetFreq(int sid, int left, int right, const Symbol *best) {
+void Trainer::ResetFreq(int64 sid, int64 left, int64 right, const Symbol *best) {
   if (left == -1 || right == -1) return;
   auto *symbol = GetPairSymbol(symbols_[sid][left], symbols_[sid][right]);
   if (symbol != nullptr && symbol != best) {
@@ -152,12 +152,12 @@ void Trainer::UpdateActiveSymbols() {
   }
 
   // At least kMinActiveSymbolsSize symbols must be in |active_symbols_|.
-  constexpr int kMinActiveSymbolsSize = 1000;
+  constexpr int64 kMinActiveSymbolsSize = 1000;
 
   // Keeps top 5% frequent symbols.
   constexpr float kTopFrequentRatio = 0.05;
-  const int size =
-      std::min<int>(std::max<int>(kMinActiveSymbolsSize,
+  const int64 size =
+      std::min<int64>(std::max<int64>(kMinActiveSymbolsSize,
                                   symbols_cache_.size() * kTopFrequentRatio),
                     symbols.size());
 
@@ -203,7 +203,7 @@ util::Status Trainer::Train() {
     }
   }
 
-  const int vocab_size =
+  const int64 vocab_size =
       trainer_spec_.vocab_size() - meta_pieces_.size() - required_chars_.size();
   CHECK_GE_OR_RETURN(vocab_size, 0);
 
@@ -215,7 +215,7 @@ util::Status Trainer::Train() {
   // Main loop.
   CHECK_OR_RETURN(final_pieces_.empty());
   while (final_pieces_.size() < static_cast<size_t>(vocab_size)) {
-    constexpr int kUpdateActiveSymbolsInteval = 100;
+    constexpr int64 kUpdateActiveSymbolsInteval = 100;
     if (final_pieces_.size() % kUpdateActiveSymbolsInteval == 0) {
       UpdateActiveSymbols();
     }
@@ -276,8 +276,8 @@ util::Status Trainer::Train() {
 
       // We have three bigrams [prev, left], [left, right], [right, next],
       // which are affected with this symbol replacement.
-      const int next = GetNextIndex(pos.sid, pos.right);
-      const int prev = GetPrevIndex(pos.sid, pos.left);
+      const int64 next = GetNextIndex(pos.sid, pos.right);
+      const int64 prev = GetPrevIndex(pos.sid, pos.left);
 
       // Resets the frequencies of bigrams [prev, left] and [right, next].
       ResetFreq(pos.sid, prev, pos.left, best_symbol);

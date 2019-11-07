@@ -40,7 +40,7 @@ namespace sentencepiece {
 namespace normalizer {
 namespace {
 
-constexpr int kMaxUnicode = 0x10FFFF;
+constexpr int64 kMaxUnicode = 0x10FFFF;
 
 static constexpr char kDefaultNormalizerName[] = "nfkc";
 
@@ -116,7 +116,7 @@ std::vector<Builder::Chars> ExpandUnnormalized(
 // Normalizes `src` with `chars_map` and returns normalized Chars.
 // `max_len` specifies the maximum length of the key in `chars_map`.
 Builder::Chars Normalize(const Builder::CharsMap &chars_map,
-                         const Builder::Chars &src, int max_len) {
+                         const Builder::Chars &src, int64 max_len) {
   CHECK_GE(max_len, 1);
   Builder::Chars normalized;
 
@@ -157,7 +157,7 @@ util::Status Builder::CompileCharsMap(const CharsMap &chars_map,
   LOG(INFO) << "Loading CharsMap of size=" << chars_map.size();
 
   // Aggregates the same target strings to save footprint.
-  std::map<Chars, int> normalized2pos;
+  std::map<Chars, int64> normalized2pos;
   for (const auto &p : chars_map) {
     normalized2pos[p.second] = 0;
   }
@@ -171,7 +171,7 @@ util::Status Builder::CompileCharsMap(const CharsMap &chars_map,
     normalized += '\0';
   }
 
-  std::vector<std::pair<std::string, int>> kv;  // key-value of Trie.
+  std::vector<std::pair<std::string, int64>> kv;  // key-value of Trie.
   for (const auto &p : chars_map) {
     // The value of Trie stores the pointer to the normalized string.
     const std::string utf8_in = string_util::UnicodeTextToUTF8(p.first);
@@ -182,22 +182,22 @@ util::Status Builder::CompileCharsMap(const CharsMap &chars_map,
 
   std::sort(kv.begin(), kv.end());
   std::vector<const char *> key(kv.size());
-  std::vector<int> value(kv.size());
+  std::vector<int64> value(kv.size());
   for (size_t i = 0; i < kv.size(); ++i) {
     key[i] = kv[i].first.c_str();
     value[i] = kv[i].second;
   }
 
   Darts::DoubleArray trie;
-  CHECK_EQ_OR_RETURN(0, trie.build(key.size(), const_cast<char **>(&key[0]),
+  CHECK_EQ_OR_RETURN(0, trie.build(key.size(), &key[0],
                                    nullptr, &value[0]))
       << "cannot build double-array";
 
-  int max_nodes_size = 0;
+  int64 max_nodes_size = 0;
   std::vector<Darts::DoubleArray::result_pair_type> results(
       2 * Normalizer::kMaxTrieResultsSize);
   for (const char *str : key) {
-    const int num_nodes = trie.commonPrefixSearch(str, results.data(),
+    const int64 num_nodes = trie.commonPrefixSearch(str, results.data(),
                                                   results.size(), strlen(str));
     max_nodes_size = std::max(num_nodes, max_nodes_size);
   }
@@ -237,7 +237,7 @@ util::Status Builder::DecompileCharsMap(absl::string_view blob,
   // When leaf nodes are found, stores them into `chars_map`.
   traverse = [&traverse, &key, &trie, &normalized, &chars_map](
                  size_t node_pos, size_t key_pos) -> void {
-    for (int c = 0; c <= 255; ++c) {
+    for (int64 c = 0; c <= 255; ++c) {
       key.push_back(static_cast<char>(c));
       size_t copied_node_pos = node_pos;
       size_t copied_key_pos = key_pos;
@@ -302,7 +302,7 @@ util::Status Builder::BuildNFKCMap(CharsMap *chars_map) {
 
   Builder::CharsMap nfkc_map;  // The final NFKC mapping.
 
-  constexpr int kMaxUnicode = 0x10FFFF;
+  constexpr int64 kMaxUnicode = 0x10FFFF;
   for (char32 cp = 1; cp <= kMaxUnicode; ++cp) {
     if (!U_IS_UNICODE_CHAR(cp)) {
       continue;
@@ -431,7 +431,7 @@ util::Status Builder::MergeUnicodeCaseFoldMap(Builder::CharsMap *chars_map) {
     c.second = trg;
   }
 
-  constexpr int kMaxUnicode = 0x10FFFF;
+  constexpr int64 kMaxUnicode = 0x10FFFF;
   for (char32 cp = 1; cp <= kMaxUnicode; ++cp) {
     if (!U_IS_UNICODE_CHAR(cp)) {
       continue;

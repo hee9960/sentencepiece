@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
   std::function<void(const std::vector<std::string> &pieces)> process;
 
   auto ToIds = [&](const std::vector<std::string> &pieces) {
-    std::vector<int> ids;
+    std::vector<int64> ids;
     for (const auto &s : pieces) {
       ids.push_back(atoi(s.c_str()));
     }

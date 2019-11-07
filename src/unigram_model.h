@@ -40,7 +40,7 @@ class Lattice {
     uint32 pos;               // Unicode position in the sentence.
     uint32 length;            // Unicode length, not UT8 byte.
     uint32 node_id;           // unique id in the current lattice.
-    int id;                   // vocab id. (maybe -1 for UNK)
+    int64 id;                   // vocab id. (maybe -1 for UNK)
     float score;              // logprob of this sentencepiece.
     float backtrace_score;    // backtrace info used in Viterbi.
     Node *prev;               // best previous node on Viterbi path.
@@ -55,19 +55,19 @@ class Lattice {
   Node *eos_node() const;
 
   // Returns nodes starting at |pos|.
-  const std::vector<Node *> &begin_nodes(int pos) const;
+  const std::vector<Node *> &begin_nodes(int64 pos) const;
 
   // Returns nodes ending at |pos|.
-  const std::vector<Node *> &end_nodes(int pos) const;
+  const std::vector<Node *> &end_nodes(int64 pos) const;
 
   // Returns Unicode character length.
-  int size() const;
+  int64 size() const;
 
   // Returns multi-byte (utf8) length.
-  int utf8_size() const;
+  int64 utf8_size() const;
 
   // Returns the substring of sentence. sentence[pos:]
-  const char *surface(int pos) const;
+  const char *surface(int64 pos) const;
 
   // Returns immutable sentence. The same as surface(0)
   const char *sentence() const;
@@ -80,7 +80,7 @@ class Lattice {
 
   // Inserts a new node at [pos, pos + length - 1].
   // After calling this method, The caller must set Node::score and Node::id.
-  Node *Insert(int pos, int length);
+  Node *Insert(int64 pos, int64 length);
 
   // Returns Viterbi path. All nodes must be populated in advance.
   std::vector<Node *> Viterbi();
@@ -122,7 +122,7 @@ class Model : public ModelInterface {
   EncodeResult Encode(absl::string_view normalized) const override;
 
   NBestEncodeResult NBestEncode(absl::string_view normalized,
-                                int nbest_size) const override;
+                                int64 nbest_size) const override;
 
   EncodeResult SampleEncode(absl::string_view normalized,
                             float theta) const override;
@@ -141,11 +141,11 @@ class Model : public ModelInterface {
   void PopulateNodes(Lattice *lattice) const;
 
   // Returns a vocab id of |piece|.
-  int PieceToId(absl::string_view piece) const override;
+  int64 PieceToId(absl::string_view piece) const override;
 
  protected:
   // Builds a Trie index.
-  void BuildTrie(std::vector<std::pair<absl::string_view, int>> *pieces);
+  void BuildTrie(std::vector<std::pair<absl::string_view, int64>> *pieces);
 
   float min_score_ = 0.0;
   float max_score_ = 0.0;
@@ -153,7 +153,7 @@ class Model : public ModelInterface {
 
   // Maximum size of the return value of Trie, which corresponds
   // to the maximum size of shared common prefix in the sentence pieces.
-  int trie_results_size_;
+  int64 trie_results_size_;
 };
 
 }  // namespace unigram

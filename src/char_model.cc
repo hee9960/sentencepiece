@@ -33,7 +33,7 @@ EncodeResult Model::Encode(absl::string_view normalized) const {
   // Splits the input into character sequence
   EncodeResult output;
   while (!normalized.empty()) {
-    const int mblen = matcher_->PrefixMatch(normalized);
+    const int64 mblen = matcher_->PrefixMatch(normalized);
     absl::string_view w(normalized.data(), mblen);
     output.emplace_back(w, PieceToId(w));
     normalized.remove_prefix(mblen);

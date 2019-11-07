@@ -58,22 +58,22 @@ class MockModel : public ModelInterface {
   }
 
   NBestEncodeResult NBestEncode(absl::string_view normalized,
-                                int nbest_size) const {
+                                int64 nbest_size) const {
     EXPECT_EQ(normalized, input_);
     return nbest_output_;
   }
 
-  bool IsControl(int id) const { return id == 1 || id == 2; }
+  bool IsControl(int64 id) const { return id == 1 || id == 2; }
 
-  bool IsUnknown(int id) const { return id == 0; }
+  bool IsUnknown(int64 id) const { return id == 0; }
 
-  int GetPieceSize() const { return 10; }
+  int64 GetPieceSize() const { return 10; }
 
-  int PieceToId(absl::string_view piece) const { return 0; }
+  int64 PieceToId(absl::string_view piece) const { return 0; }
 
-  const std::string &IdToPiece(int id) const { return kEmptyString; }
+  const std::string &IdToPiece(int64 id) const { return kEmptyString; }
 
-  float GetScore(int id) const { return 0.0; }
+  float GetScore(int64 id) const { return 0.0; }
 
  private:
   absl::string_view input_;
@@ -90,8 +90,8 @@ std::vector<std::string> GetSpVec(const EncodeResult &pieces) {
   return sps;
 }
 
-std::vector<int> GetIdVec(const EncodeResult &pieces) {
-  std::vector<int> ids;
+std::vector<int64> GetIdVec(const EncodeResult &pieces) {
+  std::vector<int64> ids;
   for (const auto &p : pieces) {
     ids.emplace_back(p.second);
   }
@@ -138,14 +138,14 @@ TEST(SentencepieceProcessorTest, EncodeTest) {
     EXPECT_OK(sp.Encode("ABC DEF", &output));
     EXPECT_EQ(GetSpVec(result), output);
 
-    std::vector<int> ids;
+    std::vector<int64> ids;
     EXPECT_OK(sp.Encode("ABC DEF", &ids));
     EXPECT_EQ(GetIdVec(result), ids);
 
     SentencePieceText spt;
     EXPECT_OK(sp.Encode("ABC DEF", &spt));
     EXPECT_EQ(4, spt.pieces_size());
-    for (int i = 0; i < 4; ++i) {
+    for (int64 i = 0; i < 4; ++i) {
       EXPECT_EQ(result[i].first, spt.pieces(i).piece());
     }
 
@@ -190,14 +190,14 @@ TEST(SentencepieceProcessorTest, EncodeTest) {
     EXPECT_OK(sp.Encode("ABC DEF", &output));
     EXPECT_EQ(GetSpVec(expected), output);
 
-    std::vector<int> ids;
+    std::vector<int64> ids;
     EXPECT_OK(sp.Encode("ABC DEF", &ids));
     EXPECT_EQ(GetIdVec(expected), ids);
 
     SentencePieceText spt;
     EXPECT_OK(sp.Encode("ABC DEF", &spt));
     EXPECT_EQ(4, spt.pieces_size());
-    for (int i = 0; i < 4; ++i) {
+    for (int64 i = 0; i < 4; ++i) {
       EXPECT_EQ(expected[i].first, spt.pieces(i).piece());
     }
 
@@ -276,7 +276,7 @@ TEST(SentencepieceProcessorTest, EncodeTest) {
     SentencePieceText spt;
     EXPECT_OK(sp.Encode("ｸﾞｰｸﾞﾙ", &spt));
     EXPECT_EQ(3, spt.pieces_size());
-    for (int i = 0; i < 3; ++i) {
+    for (int64 i = 0; i < 3; ++i) {
       EXPECT_EQ(result[i].first, spt.pieces(i).piece());
     }
 
@@ -310,7 +310,7 @@ TEST(SentencepieceProcessorTest, EncodeTest) {
     SentencePieceText spt;
     EXPECT_OK(sp.Encode("㍿", &spt));
     EXPECT_EQ(3, spt.pieces_size());
-    for (int i = 0; i < 3; ++i) {
+    for (int64 i = 0; i < 3; ++i) {
       EXPECT_EQ(result[i].first, spt.pieces(i).piece());
     }
 
@@ -355,7 +355,7 @@ TEST(SentencepieceProcessorTest, NBestEncodeTest) {
   EXPECT_EQ(GetSpVec(result[0].first), output[0]);
   EXPECT_EQ(GetSpVec(result[1].first), output[1]);
 
-  std::vector<std::vector<int>> ids;
+  std::vector<std::vector<int64>> ids;
   EXPECT_OK(sp.NBestEncode("ABC DEF", 2, &ids));
   EXPECT_EQ(2, ids.size());
   EXPECT_EQ(GetIdVec(result[0].first), ids[0]);
@@ -368,7 +368,7 @@ TEST(SentencepieceProcessorTest, NBestEncodeTest) {
   EXPECT_EQ(4, spt.nbests(1).pieces_size());
   EXPECT_NEAR(result[0].second, spt.nbests(0).score(), 0.001);
   EXPECT_NEAR(result[1].second, spt.nbests(1).score(), 0.001);
-  for (int i = 0; i < 4; ++i) {
+  for (int64 i = 0; i < 4; ++i) {
     EXPECT_EQ(result[0].first[i].first, spt.nbests(0).pieces(i).piece());
     EXPECT_EQ(result[1].first[i].first, spt.nbests(1).pieces(i).piece());
   }
@@ -410,7 +410,7 @@ TEST(SentencepieceProcessorTest, SampleEncodeTest) {
   EXPECT_EQ(4, output.size());
   EXPECT_EQ(GetSpVec(result), output);
 
-  std::vector<int> ids;
+  std::vector<int64> ids;
   EXPECT_OK(sp.SampleEncode("ABC DEF", -1, 0.5, &ids));
   EXPECT_EQ(4, ids.size());
   EXPECT_EQ(GetIdVec(result), ids);
@@ -418,7 +418,7 @@ TEST(SentencepieceProcessorTest, SampleEncodeTest) {
   SentencePieceText spt;
   EXPECT_OK(sp.SampleEncode("ABC DEF", -1, 0.5, &spt));
   EXPECT_EQ(4, spt.pieces_size());
-  for (int i = 0; i < 4; ++i) {
+  for (int64 i = 0; i < 4; ++i) {
     EXPECT_EQ(result[i].first, spt.pieces(i).piece());
     EXPECT_EQ(result[i].second, spt.pieces(i).id());
   }
@@ -432,8 +432,8 @@ TEST(SentencepieceProcessorTest, SampleEncodeTest) {
   EXPECT_OK(sp.SampleEncode("ABC DEF", 0, 0.5, &output));
   EXPECT_OK(sp.SampleEncode("ABC DEF", 1, 0.5, &output));
 
-  std::vector<int> freq(2, 0);
-  for (int i = 0; i < 5000; ++i) {
+  std::vector<int64> freq(2, 0);
+  for (int64 i = 0; i < 5000; ++i) {
     EXPECT_OK(sp.SampleEncode("ABC DEF", 20, 0.5, &output));
     EXPECT_EQ(4, output.size());
     if (GetSpVec(nbest_result[0].first) == output)
@@ -462,27 +462,27 @@ TEST(SentencepieceProcessorTest, DecodeTest) {
       return {};
     }
 
-    int GetPieceSize() const override { return 7; }
+    int64 GetPieceSize() const override { return 7; }
 
-    int PieceToId(absl::string_view piece) const override {
-      static std::unordered_map<absl::string_view, int,
+    int64 PieceToId(absl::string_view piece) const override {
+      static std::unordered_map<absl::string_view, int64,
                                 string_util::string_view_hash>
           kMap = {{"<unk>", 0}, {"<s>", 1}, {"</s>", 2},    {WS "ABC", 3},
                   {WS "DE", 4}, {"F", 5},   {"G" WS "H", 6}};
       return port::FindWithDefault(kMap, piece, 0);
     }
 
-    const std::string &IdToPiece(int id) const override {
+    const std::string &IdToPiece(int64 id) const override {
       static std::vector<std::string> kMap = {
           "<unk>", "<s>", "</s>", WS "ABC", WS "DE", "F", "G" WS "H"};
       return kMap[id];
     }
 
-    bool IsUnknown(int id) const override { return (id == 0); }
+    bool IsUnknown(int64 id) const override { return (id == 0); }
 
-    bool IsControl(int id) const override { return (id == 1 || id == 2); }
+    bool IsControl(int64 id) const override { return (id == 1 || id == 2); }
 
-    float GetScore(int id) const override { return 0.0; }
+    float GetScore(int64 id) const override { return 0.0; }
   };
 
   const std::vector<std::string> input = {"<s>", WS "ABC",   "<unk>", WS "DE",
@@ -502,7 +502,7 @@ TEST(SentencepieceProcessorTest, DecodeTest) {
     EXPECT_EQ("ABC \xE2\x81\x87  DEFG HI", spt.text());
     EXPECT_EQ(8, spt.pieces_size());
 
-    for (int i = 0; i < 6; ++i) {
+    for (int64 i = 0; i < 6; ++i) {
       EXPECT_EQ(input[i], spt.pieces(i).piece());
     }
 
@@ -718,8 +718,8 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Encode("abc", &sps));
     EXPECT_EQ(expected_str, sps);
 
-    std::vector<int> ids;
-    const std::vector<int> expected_id = {7, 6, 5};
+    std::vector<int64> ids;
+    const std::vector<int64> expected_id = {7, 6, 5};
     EXPECT_OK(sp.Encode("abc", &ids));
     EXPECT_EQ(expected_id, ids);
   }
@@ -732,8 +732,8 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Encode("abc", &sps));
     EXPECT_EQ(expected_str, sps);
 
-    std::vector<int> ids;
-    const std::vector<int> expected_id = {1, 7, 6, 5};
+    std::vector<int64> ids;
+    const std::vector<int64> expected_id = {1, 7, 6, 5};
     EXPECT_OK(sp.Encode("abc", &ids));
     EXPECT_EQ(expected_id, ids);
   }
@@ -746,8 +746,8 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Encode("abc", &sps));
     EXPECT_EQ(expected_str, sps);
 
-    std::vector<int> ids;
-    const std::vector<int> expected_id = {7, 6, 5, 2};
+    std::vector<int64> ids;
+    const std::vector<int64> expected_id = {7, 6, 5, 2};
     EXPECT_OK(sp.Encode("abc", &ids));
     EXPECT_EQ(expected_id, ids);
   }
@@ -760,8 +760,8 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Encode("abc", &sps));
     EXPECT_EQ(expected_str, sps);
 
-    std::vector<int> ids;
-    const std::vector<int> expected_id = {5, 6, 7};
+    std::vector<int64> ids;
+    const std::vector<int64> expected_id = {5, 6, 7};
     EXPECT_OK(sp.Encode("abc", &ids));
     EXPECT_EQ(expected_id, ids);
   }
@@ -775,8 +775,8 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Encode("abc", &sps));
     EXPECT_EQ(expected_str, sps);
 
-    std::vector<int> ids;
-    const std::vector<int> expected_id = {1, 7, 6, 5, 2};
+    std::vector<int64> ids;
+    const std::vector<int64> expected_id = {1, 7, 6, 5, 2};
     EXPECT_OK(sp.Encode("abc", &ids));
     EXPECT_EQ(expected_id, ids);
   }
@@ -790,8 +790,8 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Encode("abc", &sps));
     EXPECT_EQ(expected_str, sps);
 
-    std::vector<int> ids;
-    const std::vector<int> expected_id = {1, 5, 6, 7, 2};
+    std::vector<int64> ids;
+    const std::vector<int64> expected_id = {1, 5, 6, 7, 2};
     EXPECT_OK(sp.Encode("abc", &ids));
     EXPECT_EQ(expected_id, ids);
   }
@@ -805,8 +805,8 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Encode("abc", &sps));
     EXPECT_EQ(expected_str, sps);
 
-    std::vector<int> ids;
-    const std::vector<int> expected_id = {2, 5, 6, 7, 1};
+    std::vector<int64> ids;
+    const std::vector<int64> expected_id = {2, 5, 6, 7, 1};
     EXPECT_OK(sp.Encode("abc", &ids));
     EXPECT_EQ(expected_id, ids);
   }
@@ -817,7 +817,7 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Decode(sps, &output));
     EXPECT_EQ("abc", output);
 
-    const std::vector<int> ids = {3, 4, 5};
+    const std::vector<int64> ids = {3, 4, 5};
     EXPECT_OK(sp.Decode(ids, &output));
     EXPECT_EQ("abc", output);
   }
@@ -830,7 +830,7 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Decode(sps, &output));
     EXPECT_EQ("abc", output);
 
-    const std::vector<int> ids = {3, 4, 5};
+    const std::vector<int64> ids = {3, 4, 5};
     EXPECT_OK(sp.Decode(ids, &output));
     EXPECT_EQ("abc", output);
   }
@@ -843,7 +843,7 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Decode(sps, &output));
     EXPECT_EQ("abc", output);
 
-    const std::vector<int> ids = {3, 4, 5};
+    const std::vector<int64> ids = {3, 4, 5};
     EXPECT_OK(sp.Decode(ids, &output));
     EXPECT_EQ("abc", output);
   }
@@ -856,7 +856,7 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Decode(sps, &output));
     EXPECT_EQ("cab", output);
 
-    const std::vector<int> ids = {3, 4, 5};
+    const std::vector<int64> ids = {3, 4, 5};
     EXPECT_OK(sp.Decode(ids, &output));
     EXPECT_EQ("cba", output);
   }
@@ -869,7 +869,7 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Decode(sps, &output));
     EXPECT_EQ("abc", output);
 
-    const std::vector<int> ids = {3, 4, 5};
+    const std::vector<int64> ids = {3, 4, 5};
     EXPECT_OK(sp.Decode(ids, &output));
     EXPECT_EQ("abc", output);
   }
@@ -882,7 +882,7 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Decode(sps, &output));
     EXPECT_EQ("cab", output);
 
-    const std::vector<int> ids = {3, 4, 5};
+    const std::vector<int64> ids = {3, 4, 5};
     EXPECT_OK(sp.Decode(ids, &output));
     EXPECT_EQ("cba", output);
   }
@@ -895,7 +895,7 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Decode(sps, &output));
     EXPECT_EQ("cab", output);
 
-    const std::vector<int> ids = {3, 4, 5};
+    const std::vector<int64> ids = {3, 4, 5};
     EXPECT_OK(sp.Decode(ids, &output));
     EXPECT_EQ("cba", output);
   }
@@ -908,7 +908,7 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Decode(sps, &output));
     EXPECT_EQ("abc", output);
 
-    const std::vector<int> ids = {3, 4, 5};
+    const std::vector<int64> ids = {3, 4, 5};
     EXPECT_OK(sp.Decode(ids, &output));
     EXPECT_EQ("abc", output);
   }
@@ -966,8 +966,8 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
       EXPECT_OK(sp.Encode("abc", &sps));
       EXPECT_EQ(expected_str, sps);
 
-      std::vector<int> ids;
-      const std::vector<int> expected_id = {7, 6, 5};
+      std::vector<int64> ids;
+      const std::vector<int64> expected_id = {7, 6, 5};
       EXPECT_OK(sp.Encode("abc", &ids));
       EXPECT_EQ(expected_id, ids);
     }
@@ -978,7 +978,7 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
       EXPECT_OK(sp.Decode(sps, &output));
       EXPECT_EQ("abc", output);
 
-      const std::vector<int> ids = {3, 4, 5};
+      const std::vector<int64> ids = {3, 4, 5};
       EXPECT_OK(sp.Decode(ids, &output));
       EXPECT_EQ("abc", output);
     }
@@ -1014,8 +1014,8 @@ TEST(SentencePieceProcessorTest, EndToEndTest) {
     EXPECT_OK(sp.Encode("abc", &sps));
     EXPECT_EQ(expected_str, sps);
 
-    std::vector<int> ids;
-    const std::vector<int> expected_id = {7, 3, 4, 5};
+    std::vector<int64> ids;
+    const std::vector<int64> expected_id = {7, 3, 4, 5};
     EXPECT_OK(sp.Encode("abc", &ids));
     EXPECT_EQ(expected_id, ids);
   }

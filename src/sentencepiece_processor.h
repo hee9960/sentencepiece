@@ -21,6 +21,8 @@
 #include <utility>
 #include <vector>
 
+#include "common.h"
+
 namespace absl {
 class string_view;
 }  // namespace absl
@@ -55,7 +57,7 @@ namespace sentencepiece {
 //   vector<string> sps;
 //   sp.Encode("hello world.", &sps);
 //
-//   vector<int> ids;
+//   vector<int64> ids;
 //   sp.Encode("hello world.", &ids);
 //
 //   string detok;
@@ -87,7 +89,7 @@ class ModelInterface;
 class ModelProto;
 
 #ifndef SWIG
-using EncodeResult = std::vector<std::pair<absl::string_view, int>>;
+using EncodeResult = std::vector<std::pair<absl::string_view, int64>>;
 #endif  // SWIG
 
 namespace normalizer {
@@ -223,7 +225,7 @@ class SentencePieceProcessor {
   // Format:  <token> <tab> <freq>.
   // Any token with frequency < threshold will be treated as OOV.
   virtual util::Status LoadVocabulary(util::min_string_view filename,
-                                      int threshold);
+                                      int64 threshold);
 
   //////////////////////////////////////////////////////////////
   // Simple API.
@@ -234,26 +236,26 @@ class SentencePieceProcessor {
 
   // Given a UTF8 input, encodes it into a sequence of ids.
   virtual util::Status Encode(util::min_string_view input,
-                              std::vector<int> *ids) const;
+                              std::vector<int64> *ids) const;
 
   // Given a sequence of pieces, decodes it into a detokenized output.
   virtual util::Status Decode(const std::vector<std::string> &pieces,
                               std::string *detokenized) const;
 
   // Given a sequence of ids, decodes it into a detokenized output.
-  virtual util::Status Decode(const std::vector<int> &ids,
+  virtual util::Status Decode(const std::vector<int64> &ids,
                               std::string *detokenized) const;
 
   //////////////////////////////////////////////////////////////
   // NBest API.
   // Same as Encode, but returns nbest results.
   virtual util::Status NBestEncode(
-      util::min_string_view input, int nbest_size,
+      util::min_string_view input, int64 nbest_size,
       std::vector<std::vector<std::string>> *pieces) const;
 
   // Same as Encode, but returns nbest results.
-  virtual util::Status NBestEncode(util::min_string_view input, int nbest_size,
-                                   std::vector<std::vector<int>> *ids) const;
+  virtual util::Status NBestEncode(util::min_string_view input, int64 nbest_size,
+                                   std::vector<std::vector<int64>> *ids) const;
 
   //////////////////////////////////////////////////////////////
   // Sampling API
@@ -268,13 +270,13 @@ class SentencePieceProcessor {
   // nbest or lattice.
   // `nbest_size` and `alpha` correspond to parameters `l` and `alpha`
   // in https://arxiv.org/abs/1804.10959  (nbest_size < 0 means l = infinity)
-  virtual util::Status SampleEncode(util::min_string_view input, int nbest_size,
+  virtual util::Status SampleEncode(util::min_string_view input, int64 nbest_size,
                                     float alpha,
                                     std::vector<std::string> *pieces) const;
 
   // Same as above, but returns a sequence of ids.
-  virtual util::Status SampleEncode(util::min_string_view input, int nbest_size,
-                                    float alpha, std::vector<int> *ids) const;
+  virtual util::Status SampleEncode(util::min_string_view input, int64 nbest_size,
+                                    float alpha, std::vector<int64> *ids) const;
 
   //////////////////////////////////////////////////////////////
   // Advanced API returning SentencePieceText, which manages
@@ -286,11 +288,11 @@ class SentencePieceProcessor {
                               SentencePieceText *spt) const;
 
   // Same as above, but returns NBestSentencePieceText.
-  virtual util::Status NBestEncode(util::min_string_view input, int nbest_size,
+  virtual util::Status NBestEncode(util::min_string_view input, int64 nbest_size,
                                    NBestSentencePieceText *nbest_spt) const;
 
   // Same as above, but samples one segmentation from the hypotheses (Lattice).
-  virtual util::Status SampleEncode(util::min_string_view input, int nbest_size,
+  virtual util::Status SampleEncode(util::min_string_view input, int64 nbest_size,
                                     float alpha, SentencePieceText *spt) const;
 
   // Given a sequence of pieces, decodes it into SentencePieceText.
@@ -298,7 +300,7 @@ class SentencePieceProcessor {
                               SentencePieceText *spt) const;
 
   // Given a sequence of ids, decodes it into SentencePieceText.
-  virtual util::Status Decode(const std::vector<int> &ids,
+  virtual util::Status Decode(const std::vector<int64> &ids,
                               SentencePieceText *spt) const;
 
   //////////////////////////////////////////////////////////////
@@ -322,32 +324,32 @@ class SentencePieceProcessor {
     DEFINE_SPP_DIRECT_FUNC_IMPL(Encode, std::vector<std::string>, input);
   }
 
-  virtual std::vector<int> EncodeAsIds(util::min_string_view input) const {
-    DEFINE_SPP_DIRECT_FUNC_IMPL(Encode, std::vector<int>, input);
+  virtual std::vector<int64> EncodeAsIds(util::min_string_view input) const {
+    DEFINE_SPP_DIRECT_FUNC_IMPL(Encode, std::vector<int64>, input);
   }
 
   virtual std::vector<std::vector<std::string>> NBestEncodeAsPieces(
-      util::min_string_view input, int nbest_size) const {
+      util::min_string_view input, int64 nbest_size) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(
         NBestEncode, std::vector<std::vector<std::string>>, input, nbest_size);
   }
 
-  virtual std::vector<std::vector<int>> NBestEncodeAsIds(
-      util::min_string_view input, int nbest_size) const {
-    DEFINE_SPP_DIRECT_FUNC_IMPL(NBestEncode, std::vector<std::vector<int>>,
+  virtual std::vector<std::vector<int64>> NBestEncodeAsIds(
+      util::min_string_view input, int64 nbest_size) const {
+    DEFINE_SPP_DIRECT_FUNC_IMPL(NBestEncode, std::vector<std::vector<int64>>,
                                 input, nbest_size);
   }
 
   virtual std::vector<std::string> SampleEncodeAsPieces(
-      util::min_string_view input, int nbest_size, float alpha) const {
+      util::min_string_view input, int64 nbest_size, float alpha) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(SampleEncode, std::vector<std::string>, input,
                                 nbest_size, alpha);
   }
 
-  virtual std::vector<int> SampleEncodeAsIds(util::min_string_view input,
-                                             int nbest_size,
+  virtual std::vector<int64> SampleEncodeAsIds(util::min_string_view input,
+                                             int64 nbest_size,
                                              float alpha) const {
-    DEFINE_SPP_DIRECT_FUNC_IMPL(SampleEncode, std::vector<int>, input,
+    DEFINE_SPP_DIRECT_FUNC_IMPL(SampleEncode, std::vector<int64>, input,
                                 nbest_size, alpha);
   }
 
@@ -356,7 +358,7 @@ class SentencePieceProcessor {
     DEFINE_SPP_DIRECT_FUNC_IMPL(Decode, std::string, pieces);
   }
 
-  virtual std::string DecodeIds(const std::vector<int> &ids) const {
+  virtual std::string DecodeIds(const std::vector<int64> &ids) const {
     DEFINE_SPP_DIRECT_FUNC_IMPL(Decode, std::string, ids);
   }
 
@@ -369,59 +371,59 @@ class SentencePieceProcessor {
       util::min_string_view input) const;
 
   virtual util::bytes SampleEncodeAsSerializedProto(util::min_string_view input,
-                                                    int nbest_size,
+                                                    int64 nbest_size,
                                                     float alpha) const;
 
   virtual util::bytes NBestEncodeAsSerializedProto(util::min_string_view input,
-                                                   int nbest_size) const;
+                                                   int64 nbest_size) const;
 
   virtual util::bytes DecodePiecesAsSerializedProto(
       const std::vector<std::string> &pieces) const;
 
   virtual util::bytes DecodeIdsAsSerializedProto(
-      const std::vector<int> &ids) const;
+      const std::vector<int64> &ids) const;
 
   //////////////////////////////////////////////////////////////
   // Vocabulary management methods.
   //
   // Returns the size of sentence pieces, which is the same as
   // the size of vocabulary for NMT.
-  virtual int GetPieceSize() const;
+  virtual int64 GetPieceSize() const;
 
   // Returns the vocab id of `piece`.
   // Returns UNK(0) if `piece` is unknown.
-  virtual int PieceToId(util::min_string_view piece) const;
+  virtual int64 PieceToId(util::min_string_view piece) const;
 
   // Returns the string representation of vocab with `id`.
-  virtual const std::string &IdToPiece(int id) const;
+  virtual const std::string &IdToPiece(int64 id) const;
 
   // Returns the score of `id`.
   // Usually score is an emission log probability of unigram language model.
-  virtual float GetScore(int id) const;
+  virtual float GetScore(int64 id) const;
 
   // Returns true if `id` is unknown symbol.
-  virtual bool IsUnknown(int id) const;
+  virtual bool IsUnknown(int64 id) const;
 
   // Returns true if `id` is control symbol.
-  virtual bool IsControl(int id) const;
+  virtual bool IsControl(int64 id) const;
 
   // Returns true if `id` is unused symbol.
-  virtual bool IsUnused(int id) const;
+  virtual bool IsUnused(int64 id) const;
 
   // Returns the reserved id.
   // Returns -1 if not defined.
 
   // Returns unknown (<unk>) id.
-  virtual int unk_id() const;
+  virtual int64 unk_id() const;
 
   // Returns BOS (<s>) id.
-  virtual int bos_id() const;
+  virtual int64 bos_id() const;
 
   // Returns EOS (</s>) id.
-  virtual int eos_id() const;
+  virtual int64 eos_id() const;
 
   // Returns PAD (<pad>) id.
-  virtual int pad_id() const;
+  virtual int64 pad_id() const;
 
 #ifndef SWIG
   //////////////////////////////////////////////////////////////

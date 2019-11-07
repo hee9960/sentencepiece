@@ -33,15 +33,15 @@ Model::Model(const ModelProto &model_proto) {
 
 Model::~Model() {}
 
-std::vector<std::pair<absl::string_view, int>> Model::Encode(
+std::vector<std::pair<absl::string_view, int64>> Model::Encode(
     absl::string_view normalized) const {
   if (!status().ok() || normalized.empty()) {
     return {};
   }
 
   struct SymbolPair {
-    int left;     // left index of this pair
-    int right;    // right index of this pair
+    int64 left;     // left index of this pair
+    int64 right;    // right index of this pair
     float score;  // score of this pair. large is better.
     size_t size;  // length of this piece
   };
@@ -55,8 +55,8 @@ std::vector<std::pair<absl::string_view, int>> Model::Encode(
   };
 
   struct Symbol {
-    int prev;     // prev index of this symbol. -1 for BOS.
-    int next;     // next index of tihs symbol. -1 for EOS.
+    int64 prev;     // prev index of this symbol. -1 for BOS.
+    int64 next;     // next index of tihs symbol. -1 for EOS.
     bool freeze;  // this symbol is never be merged.
     absl::string_view piece;
   };
@@ -80,7 +80,7 @@ std::vector<std::pair<absl::string_view, int>> Model::Encode(
 
   // Lookup new symbol pair at [left, right] and inserts it to agenda.
   auto MaybeAddNewSymbolPair = [this, &symbol_pair_allocator, &symbols, &agenda,
-                                &rev_merge](int left, int right) {
+                                &rev_merge](int64 left, int64 right) {
     if (left == -1 || right == -1 || symbols[left].freeze ||
         symbols[right].freeze)
       return;
@@ -106,10 +106,10 @@ std::vector<std::pair<absl::string_view, int>> Model::Encode(
   };
 
   // Splits the input into character sequence
-  int index = 0;
+  int64 index = 0;
   while (!normalized.empty()) {
     Symbol s;
-    const int mblen = matcher_->PrefixMatch(normalized, &s.freeze);
+    const int64 mblen = matcher_->PrefixMatch(normalized, &s.freeze);
     s.piece = absl::string_view(normalized.data(), mblen);
     s.prev = index == 0 ? -1 : index - 1;
     normalized.remove_prefix(mblen);
@@ -159,7 +159,7 @@ std::vector<std::pair<absl::string_view, int>> Model::Encode(
   std::function<void(absl::string_view, EncodeResult *)> resegment;
   resegment = [this, &resegment, &rev_merge](absl::string_view w,
                                              EncodeResult *output) -> void {
-    const int id = PieceToId(w);
+    const int64 id = PieceToId(w);
     if (id == -1 || !IsUnusedInlined(id)) {
       output->emplace_back(w, id);
       return;
@@ -177,9 +177,9 @@ std::vector<std::pair<absl::string_view, int>> Model::Encode(
   };
 
   EncodeResult output;
-  for (int index = 0; index != -1; index = symbols[index].next) {
+  for (int64 index = 0; index != -1; index = symbols[index].next) {
     CHECK_GE(index, 0);
-    CHECK_LT(index, static_cast<int>(symbols.size()));
+    CHECK_LT(index, static_cast<int64>(symbols.size()));
     resegment(symbols[index].piece, &output);
   }
 

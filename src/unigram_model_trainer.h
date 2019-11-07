@@ -102,7 +102,7 @@ class Trainer : public TrainerInterface {
   // When the size of SentencePieces becomes less than desired_vocab_size_,
   // break the main training loop. desired_vocab_size_ = 1.1 * vocab_size_
   // for now.
-  int desired_vocab_size_;
+  int64 desired_vocab_size_;
 };
 }  // namespace unigram
 }  // namespace sentencepiece

@@ -119,7 +119,7 @@ std::vector<absl::string_view> SplitPiece(absl::string_view str,
 std::string Join(const std::vector<std::string> &tokens,
                  absl::string_view delim);
 
-std::string Join(const std::vector<int> &tokens, absl::string_view delim);
+std::string Join(const std::vector<int64> &tokens, absl::string_view delim);
 
 inline std::string StrCat(absl::string_view str) {
   return std::string(str.data(), str.size());
@@ -453,7 +453,7 @@ inline std::string JoinPath(absl::string_view first, const T &... rest) {
 #endif
 }
 
-std::string StrError(int errnum);
+std::string StrError(int64 errnum);
 
 inline Status OkStatus() { return Status(); }
 

@@ -326,7 +326,11 @@ saisxx(string_type T, sarray_type SA, index_type n, index_type k = 256) {
   int err;
   if((n < 0) || (k <= 0)) { return -1; }
   if(n <= 1) { if(n == 1) { SA[0] = 0; } return 0; }
-  try { err = saisxx_private::suffixsort(T, SA, 0, n, k, false); }
+
+  const index_type zero = 0;
+  
+  try { err = saisxx_private::suffixsort(T, SA, zero, n, k, false); }
+  
   catch(...) { err = -2; }
   return err;
 }

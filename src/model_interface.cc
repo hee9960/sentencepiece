@@ -46,7 +46,7 @@ absl::string_view ModelInterface::pad_piece() const {
 
 #undef RETURN_PIECE
 
-int ModelInterface::PieceToId(absl::string_view piece) const {
+int64 ModelInterface::PieceToId(absl::string_view piece) const {
   auto it = reserved_id_map_.find(piece);
   if (it != reserved_id_map_.end()) {
     return it->second;
@@ -65,7 +65,7 @@ void ModelInterface::InitializePieces() {
 
   std::set<absl::string_view> user_defined_symbols;
 
-  for (int i = 0; i < model_proto_->pieces_size(); ++i) {
+  for (int64 i = 0; i < model_proto_->pieces_size(); ++i) {
     const auto &sp = model_proto_->pieces(i);
     if (sp.piece().empty()) {
       status_ = util::InternalError("piece must not be empty.");
@@ -115,8 +115,8 @@ std::vector<absl::string_view> SplitIntoWords(absl::string_view text,
   if (treat_whitespace_as_suffix) {
     if (begin < end) result.emplace_back(begin, 0);
     while (begin < end) {
-      const int mblen =
-          std::min<int>(string_util::OneCharLen(begin), end - begin);
+      const int64 mblen =
+          std::min<int64>(string_util::OneCharLen(begin), end - begin);
       const bool is_ws = absl::string_view(begin, mblen) == kSpaceSymbol;
       result.back() =
           absl::string_view(result.back().data(), result.back().size() + mblen);
@@ -125,8 +125,8 @@ std::vector<absl::string_view> SplitIntoWords(absl::string_view text,
     }
   } else {
     while (begin < end) {
-      const int mblen =
-          std::min<int>(string_util::OneCharLen(begin), end - begin);
+      const int64 mblen =
+          std::min<int64>(string_util::OneCharLen(begin), end - begin);
       if (begin == text.data() ||
           absl::string_view(begin, mblen) == kSpaceSymbol)
         result.emplace_back(begin, 0);  // add empty string piece.

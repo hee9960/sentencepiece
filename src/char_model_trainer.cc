@@ -30,7 +30,7 @@ util::Status Trainer::Train() {
 
   RETURN_IF_ERROR(LoadSentences());
 
-  const int vocab_size = trainer_spec_.vocab_size() - meta_pieces_.size();
+  const int64 vocab_size = trainer_spec_.vocab_size() - meta_pieces_.size();
   CHECK_GE_OR_RETURN(vocab_size, 0);
 
   uint64 sum = 0;

@@ -261,7 +261,7 @@ util::Status TrainerInterface::LoadSentences() {
   random::ReservoirSampler<std::string> test_sentence_sampler(
       &self_test_samples_, trainer_spec_.self_test_sample_size());
 
-  int too_long_lines = 0;
+  int64 too_long_lines = 0;
 
   for (const auto &filename : trainer_spec_.input()) {
     LOG(INFO) << "Loading corpus: " << filename;
@@ -281,7 +281,7 @@ util::Status TrainerInterface::LoadSentences() {
 
       if (sentence.empty()) continue;
 
-      if (static_cast<int>(sentence.size()) >
+      if (static_cast<int64>(sentence.size()) >
           trainer_spec_.max_sentence_length()) {
         if (too_long_lines == 0) {
           LOG(WARNING) << "Found too long line (" << sentence.size() << " > "
@@ -336,7 +336,7 @@ END:
     CHECK_OR_RETURN(!sentences_.empty());
     {
       auto pool = port::MakeUnique<thread::ThreadPool>();
-      for (int n = 0; n < trainer_spec_.num_threads(); ++n) {
+      for (int64 n = 0; n < trainer_spec_.num_threads(); ++n) {
         pool->Schedule([&, n]() {
           for (size_t i = n; i < sentences_.size();
                i += trainer_spec_.num_threads()) {
@@ -423,7 +423,7 @@ END:
   if (trainer_spec_.model_type() != TrainerSpec::WORD &&
       trainer_spec_.model_type() != TrainerSpec::CHAR) {
     CHECK_LE_OR_RETURN(
-        static_cast<int>(required_chars_.size() + meta_pieces_.size()),
+        static_cast<int64>(required_chars_.size() + meta_pieces_.size()),
         trainer_spec_.vocab_size())
         << "Vocabulary size is smaller than required_chars. "
         << trainer_spec_.vocab_size() << " vs "
@@ -463,7 +463,7 @@ util::Status TrainerInterface::Serialize(ModelProto *model_proto) const {
   CHECK_OR_RETURN(dup.insert(piece).second) << piece << " is already defined";
 
   size_t fid = 0;
-  for (int id = 0; id < trainer_spec_.vocab_size(); ++id) {
+  for (int64 id = 0; id < trainer_spec_.vocab_size(); ++id) {
     const auto it = meta_pieces_.find(id);
     if (it != meta_pieces_.end()) {
       auto *sp = model_proto->add_pieces();
@@ -553,7 +553,7 @@ util::Status TrainerInterface::InitMetaPieces() {
   CHECK_OR_RETURN(meta_pieces_.empty());
   bool has_unk = false;
 
-  auto insert_id = [&has_unk, this](int id, const std::string &w) -> bool {
+  auto insert_id = [&has_unk, this](int64 id, const std::string &w) -> bool {
     if (id < 0) return true;
     if (id >= trainer_spec_.vocab_size() ||
         meta_pieces_.find(id) != meta_pieces_.end() ||
@@ -575,7 +575,7 @@ util::Status TrainerInterface::InitMetaPieces() {
 
   std::set<std::string> dup;
 
-  int id = 0;
+  int64 id = 0;
   auto insert_meta_symbol = [&id, &dup, this](
                                 const std::string &w,
                                 ModelProto::SentencePiece::Type type) -> bool {

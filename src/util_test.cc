@@ -19,7 +19,7 @@
 
 namespace sentencepiece {
 namespace {
-constexpr int kMaxUnicode = 0x10FFFF;
+constexpr int64 kMaxUnicode = 0x10FFFF;
 }
 
 TEST(UtilTest, LexicalCastTest) {
@@ -48,7 +48,7 @@ TEST(UtilTest, LexicalCastTest) {
 }
 
 TEST(UtilTest, CheckNotNullTest) {
-  int a = 0;
+  int64 a = 0;
   CHECK_NOTNULL(&a);
   EXPECT_DEATH(CHECK_NOTNULL(nullptr));
 }
@@ -80,9 +80,9 @@ TEST(UtilTest, Hex) {
     CHECK_EQ(a, string_util::HexToInt<char32>(s));
   }
 
-  const int n = 151414;
+  const int64 n = 151414;
   CHECK_EQ("24F76", string_util::IntToHex(n));
-  CHECK_EQ(n, string_util::HexToInt<int>("24F76"));
+  CHECK_EQ(n, string_util::HexToInt<int64>("24F76"));
 }
 
 TEST(UtilTest, SplitTest) {
@@ -185,7 +185,7 @@ TEST(UtilTest, JoinTest) {
 }
 
 TEST(UtilTest, JoinIntTest) {
-  std::vector<int> tokens;
+  std::vector<int64> tokens;
   tokens.push_back(10);
   tokens.push_back(2);
   tokens.push_back(-4);
@@ -270,7 +270,7 @@ TEST(UtilTest, EncodePODTet) {
 }
 
 TEST(UtilTest, ItoaTest) {
-  auto Itoa = [](int v) {
+  auto Itoa = [](int64 v) {
     char buf[16];
     string_util::Itoa(v, buf);
     return std::string(buf);
@@ -478,7 +478,7 @@ TEST(UtilTest, MapUtilTest) {
 }
 
 TEST(UtilTest, MapUtilVecTest) {
-  const std::map<std::vector<int>, std::string> kMap = {{{0, 1}, "A"}};
+  const std::map<std::vector<int64>, std::string> kMap = {{{0, 1}, "A"}};
   EXPECT_DEATH(port::FindOrDie(kMap, {0, 2}));
 }
 
@@ -517,16 +517,16 @@ TEST(UtilTest, InputOutputBufferInvalidFileTest) {
 TEST(UtilTest, STLDeleteELementsTest) {
   class Item {
    public:
-    explicit Item(int *counter) : counter_(counter) {}
+    explicit Item(int64 *counter) : counter_(counter) {}
     ~Item() { ++*counter_; }
 
    private:
-    int *counter_;
+    int64 *counter_;
   };
 
   std::vector<Item *> data;
-  int counter = 0;
-  for (int i = 0; i < 10; ++i) {
+  int64 counter = 0;
+  for (int64 i = 0; i < 10; ++i) {
     data.push_back(new Item(&counter));
   }
   port::STLDeleteElements(&data);
@@ -554,7 +554,7 @@ TEST(UtilTest, StatusTest) {
   EXPECT_EQ(std::string(""), ok2.error_message());
 
   util::OkStatus().IgnoreError();
-  for (int i = 0; i <= 16; ++i) {
+  for (int64 i = 0; i <= 16; ++i) {
     util::Status s(static_cast<util::error::Code>(i), "message");
     EXPECT_TRUE(s.ToString().find("message") != std::string::npos);
   }
@@ -573,9 +573,9 @@ TEST(UtilTest, JoinPathTest) {
 }
 
 TEST(UtilTest, ReservoirSamplerTest) {
-  std::vector<int> sampled;
-  random::ReservoirSampler<int> sampler(&sampled, 100);
-  for (int i = 0; i < 10000; ++i) {
+  std::vector<int64> sampled;
+  random::ReservoirSampler<int64> sampler(&sampled, 100);
+  for (int64 i = 0; i < 10000; ++i) {
     sampler.Add(i);
   }
   EXPECT_EQ(100, sampled.size());
